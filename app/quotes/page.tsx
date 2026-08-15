@@ -1,331 +1,319 @@
+```tsx
 "use client";
 
 import { useEffect, useState } from "react";
 
-type Lead = {
+type Customer = {
   id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  service: string | null;
-  status: string | null;
-  "quote amount": number | null;
-  "appointment date": string | null;
+  name?: string;
+  full_name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  service?: string;
+  status?: string;
+  quote_amount?: number | string;
+  notes?: string;
 };
 
-export default function QuotesPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+export default function CustomersPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    async function loadLeads() {
-      try {
-        const response = await fetch("/api/leads", {
-          cache: "no-store",
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          setLeads(result.data || []);
-        }
-      } catch (error) {
-        console.error("Unable to load quotes:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadLeads();
+    loadCustomers();
   }, []);
 
-  const quotes = leads.filter(
-    (lead) =>
-      lead["quote amount"] !== null &&
-      lead["quote amount"] !== undefined
-  );
+  async function loadCustomers() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch("/api/leads", {
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not load customers");
+      }
+
+      setCustomers(Array.isArray(result) ? result : []);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not load customers"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateCustomer(
+    id: string,
+    field: keyof Customer,
+    value: string
+  ) {
+    setCustomers((current) =>
+      current.map((customer) =>
+        customer.id === id
+          ? {
+              ...customer,
+              [field]: value,
+            }
+          : customer
+      )
+    );
+  }
+
+  async function saveCustomer(customer: Customer) {
+    try {
+      setSaving(true);
+      setError("");
+
+      const response = await fetch(`/api/leads/${customer.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: customer.name || customer.full_name || "",
+          full_name: customer.full_name || customer.name || "",
+          phone: customer.phone || "",
+          email: customer.email || "",
+          address: customer.address || "",
+          service: customer.service || "",
+          status: customer.status || "New",
+          quote_amount: customer.quote_amount || "",
+          notes: customer.notes || "",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not save customer");
+      }
+
+      alert("Customer saved successfully!");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not save customer"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main style={styles.page}>
+        <h1 style={styles.title}>Customers</h1>
+        <p>Loading customers...</p>
+      </main>
+    );
+  }
 
   return (
     <main style={styles.page}>
-      <div style={styles.container}>
-
-        <nav style={styles.nav}>
-          <a href="/" style={styles.logo}>
-            QuoteFlow
-          </a>
-
-          <div style={styles.navLinks}>
-            <a href="/" style={styles.navLink}>
-              Dashboard
-            </a>
-
-            <a href="/leads" style={styles.navLink}>
-              Leads
-            </a>
-
-            <a href="/quotes" style={styles.activeLink}>
-              Quotes
-            </a>
-
-            <a href="/appointments" style={styles.navLink}>
-              Appointments
-            </a>
-
-            <span style={styles.navLink}>
-              Contractor CRM
-            </span>
-          </div>
-        </nav>
-
-        <div style={styles.header}>
-          <div>
-            <h1 style={styles.title}>
-              Quotes
-            </h1>
-
-            <p style={styles.subtitle}>
-              Manage customer quotes and pricing.
-            </p>
-          </div>
-
-          <div style={styles.total}>
-            {quotes.length} quotes
-          </div>
+      <div style={styles.header}>
+        <div>
+          <h1 style={styles.title}>Customers</h1>
+          <p style={styles.subtitle}>QuoteFlow customer database</p>
         </div>
 
-        <div style={styles.stats}>
-
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>
-              Total Quotes
-            </div>
-
-            <div style={styles.statValue}>
-              {quotes.length}
-            </div>
-          </div>
-
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>
-              Pipeline Value
-            </div>
-
-            <div style={styles.statValue}>
-              $
-              {quotes
-                .reduce(
-                  (total, lead) =>
-                    total +
-                    Number(
-                      lead["quote amount"] || 0
-                    ),
-                  0
-                )
-                .toLocaleString()}
-            </div>
-          </div>
-
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>
-              Average Quote
-            </div>
-
-            <div style={styles.statValue}>
-              $
-              {quotes.length
-                ? Math.round(
-                    quotes.reduce(
-                      (total, lead) =>
-                        total +
-                        Number(
-                          lead["quote amount"] || 0
-                        ),
-                      0
-                    ) / quotes.length
-                  ).toLocaleString()
-                : "0"}
-            </div>
-          </div>
-
-        </div>
-
-        <section style={styles.card}>
-
-          {loading ? (
-            <div style={styles.empty}>
-              Loading quotes...
-            </div>
-          ) : quotes.length === 0 ? (
-            <div style={styles.empty}>
-              <div style={styles.emptyIcon}>
-                $
-              </div>
-
-              <h2 style={styles.emptyTitle}>
-                No quotes yet
-              </h2>
-
-              <p style={styles.emptyText}>
-                Add a quote amount to a customer
-                from their customer profile and
-                it will appear here.
-              </p>
-
-              <a
-                href="/leads"
-                style={styles.button}
-              >
-                View Leads
-              </a>
-            </div>
-          ) : (
-            <div>
-
-              <div style={styles.tableHeader}>
-                <div>Customer</div>
-                <div>Service</div>
-                <div>Status</div>
-                <div>Quote</div>
-                <div>Appointment</div>
-                <div></div>
-              </div>
-
-              {quotes.map((lead) => (
-                <a
-                  key={lead.id}
-                  href={`/leads/${lead.id}`}
-                  style={styles.row}
-                >
-
-                  <div style={styles.customer}>
-                    <div style={styles.avatar}>
-                      {lead.name
-                        ? lead.name
-                            .charAt(0)
-                            .toUpperCase()
-                        : "?"}
-                    </div>
-
-                    <div>
-                      <div style={styles.customerName}>
-                        {lead.name}
-                      </div>
-
-                      <div style={styles.contact}>
-                        {lead.phone ||
-                          lead.email ||
-                          "No contact"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={styles.service}>
-                    {lead.service || "—"}
-                  </div>
-
-                  <div>
-                    <span style={styles.status}>
-                      {lead.status || "New"}
-                    </span>
-                  </div>
-
-                  <div style={styles.amount}>
-                    $
-                    {Number(
-                      lead["quote amount"]
-                    ).toLocaleString()}
-                  </div>
-
-                  <div style={styles.date}>
-                    {lead["appointment date"]
-                      ? formatDate(
-                          lead["appointment date"]
-                        )
-                      : "Not scheduled"}
-                  </div>
-
-                  <div style={styles.arrow}>
-                    →
-                  </div>
-
-                </a>
-              ))}
-
-            </div>
-          )}
-
-        </section>
-
+        <button onClick={loadCustomers} style={styles.refreshButton}>
+          Refresh
+        </button>
       </div>
+
+      {error && <div style={styles.error}>{error}</div>}
+
+      {customers.length === 0 ? (
+        <div style={styles.empty}>
+          <h2>No customers yet</h2>
+          <p>
+            Customers will appear here when they submit a quote request.
+          </p>
+        </div>
+      ) : (
+        <div style={styles.list}>
+          {customers.map((customer) => (
+            <div key={customer.id} style={styles.card}>
+              <div style={styles.cardHeader}>
+                <div>
+                  <h2 style={styles.customerName}>
+                    {customer.name ||
+                      customer.full_name ||
+                      "Unnamed Customer"}
+                  </h2>
+
+                  <p style={styles.id}>ID: {customer.id}</p>
+                </div>
+
+                <select
+                  value={customer.status || "New"}
+                  onChange={(e) =>
+                    updateCustomer(
+                      customer.id,
+                      "status",
+                      e.target.value
+                    )
+                  }
+                  style={styles.status}
+                >
+                  <option value="New">New</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Quoted">Quoted</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div style={styles.grid}>
+                <label style={styles.label}>
+                  Name
+                  <input
+                    value={
+                      customer.name || customer.full_name || ""
+                    }
+                    onChange={(e) =>
+                      updateCustomer(
+                        customer.id,
+                        "name",
+                        e.target.value
+                      )
+                    }
+                    style={styles.input}
+                  />
+                </label>
+
+                <label style={styles.label}>
+                  Phone
+                  <input
+                    value={customer.phone || ""}
+                    onChange={(e) =>
+                      updateCustomer(
+                        customer.id,
+                        "phone",
+                        e.target.value
+                      )
+                    }
+                    style={styles.input}
+                  />
+                </label>
+
+                <label style={styles.label}>
+                  Email
+                  <input
+                    value={customer.email || ""}
+                    onChange={(e) =>
+                      updateCustomer(
+                        customer.id,
+                        "email",
+                        e.target.value
+                      )
+                    }
+                    style={styles.input}
+                  />
+                </label>
+
+                <label style={styles.label}>
+                  Service
+                  <input
+                    value={customer.service || ""}
+                    onChange={(e) =>
+                      updateCustomer(
+                        customer.id,
+                        "service",
+                        e.target.value
+                      )
+                    }
+                    style={styles.input}
+                  />
+                </label>
+
+                <label style={styles.label}>
+                  Quote Amount
+                  <input
+                    type="number"
+                    value={customer.quote_amount || ""}
+                    onChange={(e) =>
+                      updateCustomer(
+                        customer.id,
+                        "quote_amount",
+                        e.target.value
+                      )
+                    }
+                    style={styles.input}
+                  />
+                </label>
+
+                <label style={styles.label}>
+                  Address
+                  <input
+                    value={customer.address || ""}
+                    onChange={(e) =>
+                      updateCustomer(
+                        customer.id,
+                        "address",
+                        e.target.value
+                      )
+                    }
+                    style={styles.input}
+                  />
+                </label>
+              </div>
+
+              <label style={styles.label}>
+                Notes
+                <textarea
+                  value={customer.notes || ""}
+                  onChange={(e) =>
+                    updateCustomer(
+                      customer.id,
+                      "notes",
+                      e.target.value
+                    )
+                  }
+                  style={styles.textarea}
+                  rows={4}
+                />
+              </label>
+
+              <div style={styles.actions}>
+                <button
+                  onClick={() => saveCustomer(customer)}
+                  disabled={saving}
+                  style={styles.saveButton}
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
 
-function formatDate(date: string) {
-  const parts = date.split("-");
-
-  if (parts.length !== 3) {
-    return date;
-  }
-
-  return `${parts[1]}/${parts[2]}/${parts[0]}`;
-}
-
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
-    background: "#f5f7fa",
-    color: "#111827",
-    fontFamily:
-      "Arial, Helvetica, sans-serif",
-  },
-
-  container: {
-    maxWidth: "1250px",
-    margin: "0 auto",
-    padding: "0 30px 60px",
-  },
-
-  nav: {
-    height: "72px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottom: "1px solid #e5e7eb",
-    marginBottom: "40px",
-  },
-
-  logo: {
-    color: "#111827",
-    textDecoration: "none",
-    fontSize: "22px",
-    fontWeight: 800,
-  },
-
-  navLinks: {
-    display: "flex",
-    alignItems: "center",
-    gap: "28px",
-  },
-
-  navLink: {
-    color: "#6b7280",
-    textDecoration: "none",
-    fontSize: "14px",
-  },
-
-  activeLink: {
-    color: "#111827",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: 700,
+    padding: "40px",
+    background: "#f5f7fb",
+    fontFamily: "Arial, sans-serif",
   },
 
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "25px",
+    marginBottom: "30px",
   },
 
   title: {
@@ -335,173 +323,115 @@ const styles = {
   },
 
   subtitle: {
-    color: "#6b7280",
-    marginTop: "8px",
-    fontSize: "15px",
+    marginTop: "6px",
+    color: "#667085",
   },
 
-  total: {
-    color: "#6b7280",
-    fontSize: "14px",
-  },
-
-  stats: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(3, minmax(0, 1fr))",
-    gap: "18px",
-    marginBottom: "25px",
-  },
-
-  statCard: {
+  refreshButton: {
+    padding: "10px 18px",
+    borderRadius: "8px",
+    border: "1px solid #d0d5dd",
     background: "white",
-    border: "1px solid #e5e7eb",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+
+  error: {
+    padding: "14px",
+    marginBottom: "20px",
+    borderRadius: "8px",
+    background: "#fee4e2",
+    color: "#b42318",
+  },
+
+  empty: {
+    padding: "50px",
+    background: "white",
     borderRadius: "12px",
-    padding: "22px",
+    textAlign: "center",
   },
 
-  statLabel: {
-    color: "#6b7280",
-    fontSize: "13px",
-    marginBottom: "8px",
-  },
-
-  statValue: {
-    fontSize: "26px",
-    fontWeight: 700,
+  list: {
+    display: "grid",
+    gap: "20px",
   },
 
   card: {
     background: "white",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    overflow: "hidden",
+    borderRadius: "14px",
+    padding: "24px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   },
 
-  tableHeader: {
-    display: "grid",
-    gridTemplateColumns:
-      "2fr 1.3fr 1fr 1fr 1.3fr 30px",
-    gap: "15px",
-    padding: "14px 20px",
-    background: "#f9fafb",
-    borderBottom: "1px solid #e5e7eb",
-    color: "#6b7280",
-    fontSize: "12px",
-    fontWeight: 700,
-  },
-
-  row: {
-    display: "grid",
-    gridTemplateColumns:
-      "2fr 1.3fr 1fr 1fr 1.3fr 30px",
-    gap: "15px",
-    alignItems: "center",
-    padding: "17px 20px",
-    borderBottom: "1px solid #f0f0f0",
-    color: "#111827",
-    textDecoration: "none",
-  },
-
-  customer: {
+  cardHeader: {
     display: "flex",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: "12px",
-  },
-
-  avatar: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "50%",
-    background: "#eef2ff",
-    color: "#4f46e5",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 700,
+    marginBottom: "24px",
   },
 
   customerName: {
-    fontSize: "14px",
-    fontWeight: 600,
-    marginBottom: "3px",
+    margin: 0,
+    fontSize: "22px",
   },
 
-  contact: {
-    color: "#9ca3af",
+  id: {
+    marginTop: "5px",
     fontSize: "12px",
-  },
-
-  service: {
-    fontSize: "13px",
-    color: "#374151",
+    color: "#98a2b3",
   },
 
   status: {
-    display: "inline-block",
-    background: "#fef3c7",
-    color: "#92400e",
-    padding: "6px 10px",
-    borderRadius: "999px",
-    fontSize: "11px",
-    fontWeight: 700,
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #d0d5dd",
+    background: "white",
   },
 
-  amount: {
-    fontSize: "15px",
-    fontWeight: 700,
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "18px",
+    marginBottom: "18px",
   },
 
-  date: {
-    fontSize: "13px",
-    color: "#374151",
-  },
-
-  arrow: {
-    color: "#9ca3af",
-    fontSize: "18px",
-  },
-
-  empty: {
-    textAlign: "center" as const,
-    padding: "75px 30px",
-  },
-
-  emptyIcon: {
-    width: "50px",
-    height: "50px",
-    margin: "0 auto 15px",
-    borderRadius: "50%",
-    background: "#eef2ff",
-    color: "#4f46e5",
+  label: {
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "22px",
-    fontWeight: 700,
-  },
-
-  emptyTitle: {
-    margin: 0,
-    fontSize: "20px",
-  },
-
-  emptyText: {
-    maxWidth: "450px",
-    margin: "10px auto 20px",
-    color: "#6b7280",
+    flexDirection: "column",
+    gap: "7px",
+    fontWeight: 600,
     fontSize: "14px",
-    lineHeight: 1.6,
   },
 
-  button: {
-    display: "inline-block",
+  input: {
+    padding: "11px",
+    borderRadius: "8px",
+    border: "1px solid #d0d5dd",
+    fontSize: "15px",
+  },
+
+  textarea: {
+    padding: "11px",
+    borderRadius: "8px",
+    border: "1px solid #d0d5dd",
+    fontSize: "15px",
+    resize: "vertical",
+  },
+
+  actions: {
+    marginTop: "20px",
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+
+  saveButton: {
+    padding: "12px 20px",
+    border: "none",
+    borderRadius: "8px",
     background: "#111827",
     color: "white",
-    textDecoration: "none",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: 600,
+    fontWeight: 700,
+    cursor: "pointer",
   },
 };
+```
