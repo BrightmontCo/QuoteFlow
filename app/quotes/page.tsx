@@ -1,4 +1,3 @@
-```tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,6 +8,7 @@ type Customer = {
   full_name?: string;
   email?: string;
   phone?: string;
+  address?: string;
   service?: string;
   status?: string;
 };
@@ -17,13 +17,17 @@ export default function QuotesPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
 
-  const loadCustomers = async () => {
+  async function loadCustomers() {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch("/api/leads");
+      const response = await fetch("/api/leads", {
+        method: "GET",
+        cache: "no-store",
+      });
 
       const data = await response.json();
 
@@ -31,11 +35,7 @@ export default function QuotesPage() {
         throw new Error(data.error || "Could not load customers");
       }
 
-      const list = Array.isArray(data)
-        ? data
-        : data.leads || data.customers || [];
-
-      setCustomers(list);
+      setCustomers(data.leads || data.customers || []);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not load customers"
@@ -43,21 +43,20 @@ export default function QuotesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const updateStatus = async (customerId: string, newStatus: string) => {
+  async function updateStatus(id: string, status: string) {
     try {
+      setSaving(id);
       setError("");
 
-      const url = "/api/leads/" + customerId;
-
-      const response = await fetch(url, {
+      const response = await fetch(`/api/leads/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          status: newStatus,
+          status,
         }),
       });
 
@@ -67,24 +66,23 @@ export default function QuotesPage() {
         throw new Error(data.error || "Could not update customer");
       }
 
-      setCustomers((oldCustomers) =>
-        oldCustomers.map((customer) => {
-          if (customer.id === customerId) {
-            return {
-              ...customer,
-              status: newStatus,
-            };
-          }
-
-          return customer;
-        })
+      setCustomers((current) =>
+        current.map((customer) =>
+          customer.id === id
+            ? { ...customer, status }
+            : customer
+        )
       );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not update customer"
+        err instanceof Error
+          ? err.message
+          : "Could not update customer"
       );
+    } finally {
+      setSaving(null);
     }
-  };
+  }
 
   useEffect(() => {
     loadCustomers();
@@ -95,7 +93,7 @@ export default function QuotesPage() {
       style={{
         minHeight: "100vh",
         background: "#f5f7fb",
-        padding: "40px 24px",
+        padding: "40px",
         fontFamily: "Arial, sans-serif",
       }}
     >
@@ -130,7 +128,7 @@ export default function QuotesPage() {
                 color: "#6b7280",
               }}
             >
-              Manage customer quotes and requests.
+              Manage customer quote requests.
             </p>
           </div>
 
@@ -138,10 +136,10 @@ export default function QuotesPage() {
             onClick={loadCustomers}
             style={{
               border: "none",
-              borderRadius: "8px",
-              padding: "10px 16px",
               background: "#111827",
-              color: "#ffffff",
+              color: "white",
+              padding: "12px 18px",
+              borderRadius: "8px",
               cursor: "pointer",
               fontWeight: 600,
             }}
@@ -150,75 +148,63 @@ export default function QuotesPage() {
           </button>
         </div>
 
-        {error !== "" && (
+        {error && (
           <div
             style={{
               background: "#fee2e2",
               color: "#991b1b",
-              padding: "14px 16px",
+              padding: "15px",
               borderRadius: "8px",
               marginBottom: "20px",
             }}
           >
-            {error}
+            ERROR: {error}
           </div>
         )}
 
-        {loading && (
+        {loading ? (
           <div
             style={{
-              background: "#ffffff",
-              padding: "40px",
+              background: "white",
+              padding: "30px",
               borderRadius: "12px",
               textAlign: "center",
-              color: "#6b7280",
             }}
           >
             Loading customers...
           </div>
-        )}
-
-        {!loading && customers.length === 0 && error === "" && (
+        ) : customers.length === 0 ? (
           <div
             style={{
-              background: "#ffffff",
-              padding: "50px 30px",
+              background: "white",
+              padding: "40px",
               borderRadius: "12px",
               textAlign: "center",
             }}
           >
-            <h2
-              style={{
-                color: "#111827",
-              }}
-            >
+            <h2 style={{ color: "#111827" }}>
               No customers yet
             </h2>
 
-            <p
-              style={{
-                color: "#6b7280",
-              }}
-            >
-              Customers will appear here when they submit a quote request.
+            <p style={{ color: "#6b7280" }}>
+              Customers will appear here when they submit a quote
+              request.
             </p>
           </div>
-        )}
-
-        {!loading && customers.length > 0 && (
+        ) : (
           <div
             style={{
               display: "grid",
-              gap: "16px",
+              gap: "18px",
             }}
           >
             {customers.map((customer) => (
               <div
                 key={customer.id}
                 style={{
-                  background: "#ffffff",
+                  background: "white",
                   borderRadius: "12px",
-                  padding: "22px",
+                  padding: "24px",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
                 }}
               >
@@ -226,76 +212,85 @@ export default function QuotesPage() {
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "flex-start",
                     gap: "20px",
+                    flexWrap: "wrap",
                   }}
                 >
                   <div>
                     <h2
                       style={{
-                        margin: "0 0 8px",
+                        margin: "0 0 10px",
                         color: "#111827",
-                        fontSize: "20px",
                       }}
                     >
-                      {customer.name ||
-                        customer.full_name ||
+                      {customer.full_name ||
+                        customer.name ||
                         "Unnamed Customer"}
                     </h2>
 
                     {customer.email && (
-                      <p
-                        style={{
-                          margin: "5px 0",
-                          color: "#4b5563",
-                        }}
-                      >
+                      <p style={{ margin: "5px 0", color: "#4b5563" }}>
                         Email: {customer.email}
                       </p>
                     )}
 
                     {customer.phone && (
-                      <p
-                        style={{
-                          margin: "5px 0",
-                          color: "#4b5563",
-                        }}
-                      >
+                      <p style={{ margin: "5px 0", color: "#4b5563" }}>
                         Phone: {customer.phone}
                       </p>
                     )}
 
+                    {customer.address && (
+                      <p style={{ margin: "5px 0", color: "#4b5563" }}>
+                        Address: {customer.address}
+                      </p>
+                    )}
+
                     {customer.service && (
-                      <p
-                        style={{
-                          margin: "5px 0",
-                          color: "#4b5563",
-                        }}
-                      >
+                      <p style={{ margin: "5px 0", color: "#4b5563" }}>
                         Service: {customer.service}
                       </p>
                     )}
                   </div>
 
-                  <select
-                    value={customer.status || "new"}
-                    onChange={(event) =>
-                      updateStatus(customer.id, event.target.value)
-                    }
-                    style={{
-                      padding: "9px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #d1d5db",
-                      background: "#ffffff",
-                      color: "#111827",
-                    }}
-                  >
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="quoted">Quoted</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="completed">Completed</option>
-                  </select>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        marginBottom: "8px",
+                        color: "#374151",
+                      }}
+                    >
+                      Status
+                    </label>
+
+                    <select
+                      value={customer.status || "new"}
+                      disabled={saving === customer.id}
+                      onChange={(event) =>
+                        updateStatus(
+                          customer.id,
+                          event.target.value
+                        )
+                      }
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        border: "1px solid #d1d5db",
+                        background: "white",
+                        minWidth: "150px",
+                      }}
+                    >
+                      <option value="new">New</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="quoted">Quoted</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             ))}
@@ -305,4 +300,3 @@ export default function QuotesPage() {
     </main>
   );
 }
-```
