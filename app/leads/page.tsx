@@ -22,182 +22,254 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadLeads() {
-      try {
-        const response = await fetch("/api/leads", {
-          cache: "no-store",
-        });
-
-        const result = await response.json();
-
+    fetch("/api/leads", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((result) => {
         if (result.success) {
           setLeads(result.data || []);
         }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadLeads();
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f5f7fa",
-        padding: "40px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1100px",
-          margin: "0 auto",
-        }}
-      >
-        <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>
-          Leads
-        </h1>
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
 
-        <p
-          style={{
-            color: "#6b7280",
-            marginBottom: "30px",
-          }}
-        >
-          Manage your customers and quote requests.
-        </p>
+        body {
+          margin: 0;
+          font-family: Arial, sans-serif;
+          background: #f5f7fa;
+          color: #111827;
+        }
 
-        {loading ? (
-          <div
-            style={{
-              background: "white",
-              padding: "30px",
-              borderRadius: "12px",
-            }}
-          >
-            Loading leads...
+        .page {
+          min-height: 100vh;
+          padding: 40px;
+        }
+
+        .container {
+          max-width: 1100px;
+          margin: auto;
+        }
+
+        .top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 30px;
+        }
+
+        h1 {
+          margin: 0;
+          font-size: 30px;
+        }
+
+        .back {
+          text-decoration: none;
+          color: #374151;
+          background: white;
+          border: 1px solid #e5e7eb;
+          padding: 10px 16px;
+          border-radius: 8px;
+        }
+
+        .count {
+          color: #6b7280;
+          margin-top: 8px;
+        }
+
+        .card {
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 16px;
+        }
+
+        .top-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 20px;
+        }
+
+        .name {
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .service {
+          color: #6b7280;
+          margin-top: 6px;
+        }
+
+        .status {
+          background: #dbeafe;
+          color: #1d4ed8;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .details {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 15px;
+          margin-top: 22px;
+          padding-top: 20px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .detail {
+          color: #4b5563;
+          font-size: 14px;
+        }
+
+        .detail strong {
+          color: #111827;
+        }
+
+        .problem {
+          margin-top: 20px;
+          background: #f9fafb;
+          padding: 15px;
+          border-radius: 8px;
+        }
+
+        .empty {
+          background: white;
+          padding: 40px;
+          border-radius: 12px;
+          color: #6b7280;
+        }
+
+        @media (max-width: 700px) {
+          .page {
+            padding: 20px;
+          }
+
+          .top-row {
+            flex-direction: column;
+          }
+
+          .details {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div className="page">
+
+        <div className="container">
+
+          <div className="top">
+
+            <div>
+              <h1>Leads</h1>
+
+              <div className="count">
+                {loading
+                  ? "Loading..."
+                  : `${leads.length} customers`}
+              </div>
+            </div>
+
+            <a href="/" className="back">
+              ← Dashboard
+            </a>
+
           </div>
-        ) : leads.length === 0 ? (
-          <div
-            style={{
-              background: "white",
-              padding: "30px",
-              borderRadius: "12px",
-            }}
-          >
-            No leads yet.
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gap: "16px",
-            }}
-          >
-            {leads.map((lead) => (
-              <div
-                key={lead.id}
-                style={{
-                  background: "white",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "12px",
-                  padding: "24px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "20px",
-                  }}
-                >
+
+          {loading ? (
+
+            <div className="empty">
+              Loading leads...
+            </div>
+
+          ) : leads.length === 0 ? (
+
+            <div className="empty">
+              No leads yet.
+            </div>
+
+          ) : (
+
+            leads.map((lead) => (
+
+              <div className="card" key={lead.id}>
+
+                <div className="top-row">
+
                   <div>
-                    <h2
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "20px",
-                      }}
-                    >
+
+                    <div className="name">
                       {lead.name}
-                    </h2>
+                    </div>
 
-                    <p
-                      style={{
-                        margin: "4px 0",
-                        color: "#6b7280",
-                      }}
-                    >
+                    <div className="service">
                       {lead.service || "No service specified"}
-                    </p>
+                    </div>
 
-                    <p
-                      style={{
-                        margin: "4px 0",
-                        color: "#6b7280",
-                      }}
-                    >
-                      {lead.phone || "No phone"}
-                    </p>
-
-                    <p
-                      style={{
-                        margin: "4px 0",
-                        color: "#6b7280",
-                      }}
-                    >
-                      {lead.email || "No email"}
-                    </p>
                   </div>
 
-                  <div
-                    style={{
-                      textAlign: "right",
-                    }}
-                  >
-                    <span
-                      style={{
-                        background: "#dbeafe",
-                        color: "#1d4ed8",
-                        padding: "6px 10px",
-                        borderRadius: "999px",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                      }}
-                    >
+                  <div>
+                    <span className="status">
                       {lead.status || "New"}
                     </span>
                   </div>
+
                 </div>
 
-                {lead.address && (
-                  <p style={{ marginTop: "18px" }}>
+                <div className="details">
+
+                  <div className="detail">
+                    <strong>Phone:</strong>{" "}
+                    {lead.phone || "—"}
+                  </div>
+
+                  <div className="detail">
+                    <strong>Email:</strong>{" "}
+                    {lead.email || "—"}
+                  </div>
+
+                  <div className="detail">
                     <strong>Address:</strong>{" "}
-                    {lead.address}
-                  </p>
-                )}
+                    {lead.address || "—"}
+                  </div>
+
+                  <div className="detail">
+                    <strong>Appointment:</strong>{" "}
+                    {lead["appointment date"] || "—"}
+                  </div>
+
+                  <div className="detail">
+                    <strong>Quote:</strong>{" "}
+                    {lead["quote amount"]
+                      ? `$${lead["quote amount"]}`
+                      : "Not quoted"}
+                  </div>
+
+                </div>
 
                 {lead.problem && (
-                  <p style={{ marginTop: "10px" }}>
+                  <div className="problem">
                     <strong>Problem:</strong>{" "}
                     {lead.problem}
-                  </p>
+                  </div>
                 )}
 
-                {lead["appointment date"] && (
-                  <p style={{ marginTop: "10px" }}>
-                    <strong>Appointment:</strong>{" "}
-                    {lead["appointment date"]}
-                  </p>
-                )}
               </div>
-            ))}
-          </div>
-        )}
+
+            ))
+
+          )}
+
+        </div>
+
       </div>
-    </div>
+    </>
   );
 }
