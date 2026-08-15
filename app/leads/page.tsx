@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 
 type Lead = {
   id: string;
@@ -17,139 +16,43 @@ type Lead = {
   notes: string | null;
 };
 
-export default function LeadDetails() {
-  const params = useParams();
-  const id = String(params.id);
-
-  const [lead, setLead] = useState<Lead | null>(null);
+export default function LeadsPage() {
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [status, setStatus] = useState("");
-  const [quoteAmount, setQuoteAmount] = useState("");
-  const [appointmentDate, setAppointmentDate] = useState("");
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-
   useEffect(() => {
-    async function loadLead() {
+    async function loadLeads() {
       try {
-        const response = await fetch(
-          `/api/leads?id=${encodeURIComponent(id)}`,
-          { cache: "no-store" }
-        );
+        const response = await fetch("/api/leads", {
+          cache: "no-store",
+        });
 
         const result = await response.json();
 
         if (!result.success) {
-          setError(result.error || "Unable to load customer.");
+          setError(result.error || "Unable to load leads.");
           return;
         }
 
-        if (!result.data || result.data.length === 0) {
-          setError("Customer not found.");
-          return;
-        }
-
-        const found = result.data[0];
-
-        setLead(found);
-        setStatus(found.status || "New");
-        setQuoteAmount(
-          found["quote amount"] != null
-            ? String(found["quote amount"])
-            : ""
-        );
-        setAppointmentDate(
-          found["appointment date"] || ""
-        );
-        setNotes(found.notes || "");
+        setLeads(result.data || []);
       } catch (err) {
         console.error(err);
-        setError("Unable to load customer.");
+        setError("Unable to load leads.");
       } finally {
         setLoading(false);
       }
     }
 
-    loadLead();
-  }, [id]);
-
-  async function saveChanges() {
-    setSaving(true);
-
-    try {
-      const response = await fetch("/api/leads", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id,
-          status,
-          quoteAmount,
-          appointmentDate,
-          notes,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        alert(result.error || "Unable to save changes.");
-        return;
-      }
-
-      setLead((current) =>
-        current
-          ? {
-              ...current,
-              status,
-              "quote amount":
-                quoteAmount === ""
-                  ? null
-                  : Number(quoteAmount),
-              "appointment date":
-                appointmentDate || null,
-              notes: notes || null,
-            }
-          : current
-      );
-
-      alert("Changes saved!");
-    } catch (err) {
-      console.error(err);
-      alert("Unable to save changes.");
-    } finally {
-      setSaving(false);
-    }
-  }
+    loadLeads();
+  }, []);
 
   if (loading) {
     return (
       <main style={styles.page}>
         <div style={styles.container}>
-          <p>Loading customer...</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (error || !lead) {
-    return (
-      <main style={styles.page}>
-        <div style={styles.container}>
-          <a href="/leads" style={styles.back}>
-            ← Back to Leads
-          </a>
-
-          <div style={styles.card}>
-            <h1>Customer not found</h1>
-            <p>{error}</p>
-            <p style={styles.small}>
-              Customer ID: {id}
-            </p>
-          </div>
+          <h1 style={styles.title}>Leads</h1>
+          <p style={styles.muted}>Loading leads...</p>
         </div>
       </main>
     );
@@ -159,161 +62,93 @@ export default function LeadDetails() {
     <main style={styles.page}>
       <div style={styles.container}>
 
-        <a href="/leads" style={styles.back}>
-          ← Back to Leads
-        </a>
-
-        <div style={styles.header}>
+        <div style={styles.topBar}>
           <div>
-            <h1 style={styles.title}>
-              {lead.name}
-            </h1>
-
+            <h1 style={styles.title}>Leads</h1>
             <p style={styles.subtitle}>
-              {lead.service || "HVAC Service"}
+              Manage your customers and service requests.
             </p>
           </div>
 
-          <span style={styles.badge}>
-            {status || "New"}
-          </span>
+          <a href="/" style={styles.dashboardButton}>
+            Dashboard
+          </a>
         </div>
+
+        {error && (
+          <div style={styles.error}>
+            {error}
+          </div>
+        )}
+
+        {!error && leads.length === 0 && (
+          <div style={styles.empty}>
+            <h2>No leads yet</h2>
+            <p>
+              Customer requests will appear here when they are submitted.
+            </p>
+          </div>
+        )}
 
         <div style={styles.grid}>
-
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Customer Information
-            </h2>
-
-            <Info label="Phone" value={lead.phone} />
-            <Info label="Email" value={lead.email} />
-            <Info label="Address" value={lead.address} />
-          </div>
-
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Service Request
-            </h2>
-
-            <Info label="Service" value={lead.service} />
-            <Info label="Problem" value={lead.problem} />
-          </div>
-
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Appointment
-            </h2>
-
-            <label style={styles.label}>
-              Appointment Date
-            </label>
-
-            <input
-              type="date"
-              value={appointmentDate}
-              onChange={(e) =>
-                setAppointmentDate(e.target.value)
-              }
-              style={styles.input}
-            />
-
-            <label style={styles.label}>
-              Status
-            </label>
-
-            <select
-              value={status}
-              onChange={(e) =>
-                setStatus(e.target.value)
-              }
-              style={styles.input}
+          {leads.map((lead) => (
+            <a
+              key={lead.id}
+              href={`/leads/${lead.id}`}
+              style={styles.leadCard}
             >
-              <option>New</option>
-              <option>Contacted</option>
-              <option>Quoted</option>
-              <option>Scheduled</option>
-              <option>Completed</option>
-              <option>Cancelled</option>
-            </select>
-          </div>
+              <div style={styles.cardTop}>
+                <div>
+                  <h2 style={styles.name}>
+                    {lead.name}
+                  </h2>
 
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Quote
-            </h2>
+                  <p style={styles.service}>
+                    {lead.service || "HVAC Service"}
+                  </p>
+                </div>
 
-            <label style={styles.label}>
-              Quote Amount
-            </label>
+                <span style={styles.status}>
+                  {lead.status || "New"}
+                </span>
+              </div>
 
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={quoteAmount}
-              onChange={(e) =>
-                setQuoteAmount(e.target.value)
-              }
-              placeholder="0.00"
-              style={styles.input}
-            />
+              <div style={styles.problem}>
+                {lead.problem || "No problem description"}
+              </div>
 
-            <div style={styles.quote}>
-              $
-              {quoteAmount
-                ? Number(quoteAmount).toFixed(2)
-                : "0.00"}
-            </div>
-          </div>
+              <div style={styles.details}>
+                {lead.phone && (
+                  <div>
+                    <strong>Phone:</strong>{" "}
+                    {lead.phone}
+                  </div>
+                )}
 
+                {lead.email && (
+                  <div>
+                    <strong>Email:</strong>{" "}
+                    {lead.email}
+                  </div>
+                )}
+
+                {lead["appointment date"] && (
+                  <div>
+                    <strong>Appointment:</strong>{" "}
+                    {lead["appointment date"]}
+                  </div>
+                )}
+              </div>
+
+              <div style={styles.view}>
+                View Customer →
+              </div>
+            </a>
+          ))}
         </div>
-
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>
-            Notes
-          </h2>
-
-          <textarea
-            value={notes}
-            onChange={(e) =>
-              setNotes(e.target.value)
-            }
-            placeholder="Add notes..."
-            style={styles.textarea}
-          />
-        </div>
-
-        <button
-          onClick={saveChanges}
-          disabled={saving}
-          style={styles.button}
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
 
       </div>
     </main>
-  );
-}
-
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null;
-}) {
-  return (
-    <div style={styles.info}>
-      <div style={styles.label}>
-        {label}
-      </div>
-
-      <div style={styles.value}>
-        {value || "—"}
-      </div>
-    </div>
   );
 }
 
@@ -322,7 +157,7 @@ const styles = {
     minHeight: "100vh",
     background: "#f5f7fa",
     padding: "40px",
-    fontFamily: "Arial, sans-serif",
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: "#111827",
   },
 
@@ -331,111 +166,127 @@ const styles = {
     margin: "0 auto",
   },
 
-  back: {
-    display: "inline-block",
-    marginBottom: "30px",
-    color: "#374151",
-    textDecoration: "none",
-  },
-
-  header: {
+  topBar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "30px",
+    gap: "20px",
   },
 
   title: {
     margin: 0,
     fontSize: "32px",
+    fontWeight: 700,
   },
 
   subtitle: {
+    marginTop: "8px",
+    color: "#6b7280",
+    fontSize: "15px",
+  },
+
+  muted: {
     color: "#6b7280",
   },
 
-  badge: {
-    background: "#dbeafe",
-    color: "#1d4ed8",
-    padding: "8px 14px",
-    borderRadius: "999px",
+  dashboardButton: {
+    background: "white",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    padding: "10px 16px",
+    textDecoration: "none",
+    color: "#374151",
+    fontSize: "14px",
     fontWeight: 600,
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: "20px",
   },
 
-  card: {
+  leadCard: {
+    display: "block",
     background: "white",
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     padding: "24px",
-    marginBottom: "20px",
+    textDecoration: "none",
+    color: "#111827",
   },
 
-  cardTitle: {
-    marginTop: 0,
-    marginBottom: "20px",
-    fontSize: "18px",
-  },
-
-  info: {
+  cardTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "15px",
     marginBottom: "18px",
   },
 
-  label: {
-    display: "block",
+  name: {
+    margin: 0,
+    fontSize: "20px",
+  },
+
+  service: {
+    marginTop: "6px",
+    marginBottom: 0,
     color: "#6b7280",
-    fontSize: "13px",
-    marginBottom: "7px",
-    marginTop: "15px",
-  },
-
-  value: {
-    fontSize: "15px",
-  },
-
-  input: {
-    width: "100%",
-    padding: "11px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
     fontSize: "14px",
-    background: "white",
   },
 
-  textarea: {
-    width: "100%",
-    minHeight: "120px",
+  status: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    borderRadius: "999px",
+    padding: "6px 10px",
+    fontSize: "12px",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  },
+
+  problem: {
+    background: "#f9fafb",
+    borderRadius: "8px",
     padding: "12px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
+    marginBottom: "18px",
+    color: "#4b5563",
     fontSize: "14px",
-    resize: "vertical",
   },
 
-  quote: {
+  details: {
+    display: "grid",
+    gap: "8px",
+    color: "#4b5563",
+    fontSize: "13px",
+  },
+
+  view: {
     marginTop: "20px",
-    fontSize: "28px",
-    fontWeight: 700,
-  },
-
-  button: {
-    background: "#111827",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    padding: "13px 24px",
+    paddingTop: "16px",
+    borderTop: "1px solid #e5e7eb",
+    color: "#2563eb",
     fontSize: "14px",
     fontWeight: 600,
-    cursor: "pointer",
   },
 
-  small: {
+  empty: {
+    background: "white",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "50px",
+    textAlign: "center" as const,
     color: "#6b7280",
-    fontSize: "13px",
+  },
+
+  error: {
+    background: "#fee2e2",
+    color: "#991b1b",
+    border: "1px solid #fecaca",
+    borderRadius: "8px",
+    padding: "15px",
+    marginBottom: "20px",
   },
 };
