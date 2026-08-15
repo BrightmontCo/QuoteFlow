@@ -7,25 +7,22 @@ export async function GET(request: Request) {
   try {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Supabase environment variables are missing",
-        },
+        { success: false, error: "Supabase variables are missing" },
         { status: 500 }
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
 
-    let url = `${SUPABASE_URL}/rest/v1/leads?select=*`;
+    let supabaseUrl =
+      `${SUPABASE_URL}/rest/v1/leads?select=*`;
 
     if (id) {
-      url += `&id=eq.${encodeURIComponent(id)}`;
+      supabaseUrl += `&id=eq.${encodeURIComponent(id)}`;
     }
 
-    const response = await fetch(url, {
-      method: "GET",
+    const response = await fetch(supabaseUrl, {
       headers: {
         apikey: SUPABASE_KEY,
         Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -35,19 +32,10 @@ export async function GET(request: Request) {
 
     const data = await response.json();
 
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: data?.message || "Supabase request failed",
-        },
-        { status: response.status }
-      );
-    }
-
     return NextResponse.json({
-      success: true,
-      data,
+      success: response.ok,
+      data: response.ok ? data : [],
+      error: response.ok ? null : data?.message,
     });
   } catch (error) {
     return NextResponse.json(
@@ -64,36 +52,37 @@ export async function PATCH(request: Request) {
   try {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Supabase environment variables are missing",
-        },
+        { success: false, error: "Supabase variables are missing" },
         { status: 500 }
       );
     }
 
     const body = await request.json();
 
-    const {
-      id,
-      status,
-      quoteAmount,
-      appointmentDate,
-      notes,
-    } = body;
-
-    if (!id) {
+    if (!body.id) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Lead ID is required",
-        },
+        { success: false, error: "Customer ID is missing" },
         { status: 400 }
       );
     }
 
+    const update = {
+      status: body.status || "New",
+      "quote amount":
+        body.quoteAmount === ""
+          ? null
+          : body.quoteAmount == null
+          ? null
+          : Number(body.quoteAmount),
+      "appointment date":
+        body.appointmentDate || null,
+      notes: body.notes || null,
+    };
+
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?id=eq.${encodeURIComponent(id)}`,
+      `${SUPABASE_URL}/rest/v1/leads?id=eq.${encodeURIComponent(
+        body.id
+      )}`,
       {
         method: "PATCH",
         headers: {
@@ -102,34 +91,16 @@ export async function PATCH(request: Request) {
           "Content-Type": "application/json",
           Prefer: "return=representation",
         },
-        body: JSON.stringify({
-          status: status || "New",
-          "quote amount":
-            quoteAmount === "" || quoteAmount == null
-              ? null
-              : Number(quoteAmount),
-          "appointment date":
-            appointmentDate || null,
-          notes: notes || null,
-        }),
+        body: JSON.stringify(update),
       }
     );
 
     const data = await response.json();
 
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: data?.message || "Unable to update lead",
-        },
-        { status: response.status }
-      );
-    }
-
     return NextResponse.json({
-      success: true,
+      success: response.ok,
       data,
+      error: response.ok ? null : data?.message,
     });
   } catch (error) {
     return NextResponse.json(
