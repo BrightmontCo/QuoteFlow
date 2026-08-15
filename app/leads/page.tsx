@@ -6,11 +6,11 @@ import { useEffect, useState } from "react";
 type Lead = {
   id: string;
   name: string;
-  phone?: string;
-  email?: string;
-  service?: string;
-  problem?: string;
-  status?: string;
+  phone?: string | null;
+  email?: string | null;
+  service?: string | null;
+  problem?: string | null;
+  status?: string | null;
 };
 
 export default function LeadsPage() {
@@ -19,10 +19,10 @@ export default function LeadsPage() {
 
   useEffect(() => {
     fetch("/api/leads")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setLeads(data.data || []);
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.success) {
+          setLeads(result.data || []);
         }
       })
       .catch((error) => {
@@ -38,13 +38,14 @@ export default function LeadsPage() {
       style={{
         minHeight: "100vh",
         background: "#f5f7fa",
-        padding: "40px",
+        color: "#111827",
         fontFamily: "Arial, sans-serif",
+        padding: "40px",
       }}
     >
       <div
         style={{
-          maxWidth: "1100px",
+          maxWidth: "1200px",
           margin: "0 auto",
         }}
       >
@@ -57,8 +58,33 @@ export default function LeadsPage() {
           }}
         >
           <div>
-            <h1>Leads</h1>
-            <p>
+            <a
+              href="/"
+              style={{
+                color: "#111827",
+                textDecoration: "none",
+                fontSize: "22px",
+                fontWeight: 800,
+              }}
+            >
+              QuoteFlow
+            </a>
+
+            <h1
+              style={{
+                fontSize: "32px",
+                margin: "35px 0 5px",
+              }}
+            >
+              Leads
+            </h1>
+
+            <p
+              style={{
+                color: "#6b7280",
+                margin: 0,
+              }}
+            >
               Manage your customers and leads.
             </p>
           </div>
@@ -67,8 +93,8 @@ export default function LeadsPage() {
             href="/leads/new"
             style={{
               background: "#111827",
-              color: "white",
-              padding: "12px 18px",
+              color: "#ffffff",
+              padding: "12px 20px",
               borderRadius: "8px",
               textDecoration: "none",
               fontWeight: 600,
@@ -80,14 +106,43 @@ export default function LeadsPage() {
 
         <div
           style={{
-            background: "white",
+            display: "flex",
+            gap: "25px",
+            marginBottom: "25px",
+          }}
+        >
+          <a href="/" style={linkStyle}>
+            Dashboard
+          </a>
+
+          <a href="/leads" style={activeLinkStyle}>
+            Leads
+          </a>
+
+          <a href="/quotes" style={linkStyle}>
+            Quotes
+          </a>
+
+          <a href="/appointments" style={linkStyle}>
+            Appointments
+          </a>
+        </div>
+
+        <div
+          style={{
+            background: "#ffffff",
             border: "1px solid #e5e7eb",
             borderRadius: "12px",
             overflow: "hidden",
           }}
         >
           {loading && (
-            <div style={{ padding: "40px" }}>
+            <div
+              style={{
+                padding: "50px",
+                textAlign: "center",
+              }}
+            >
               Loading leads...
             </div>
           )}
@@ -95,25 +150,30 @@ export default function LeadsPage() {
           {!loading && leads.length === 0 && (
             <div
               style={{
-                padding: "50px",
+                padding: "70px 20px",
                 textAlign: "center",
               }}
             >
               <h2>No leads yet</h2>
 
-              <p>
+              <p
+                style={{
+                  color: "#6b7280",
+                  marginBottom: "25px",
+                }}
+              >
                 Add your first customer.
               </p>
 
               <a
                 href="/leads/new"
                 style={{
-                  display: "inline-block",
                   background: "#111827",
-                  color: "white",
-                  padding: "12px 18px",
+                  color: "#ffffff",
+                  padding: "12px 20px",
                   borderRadius: "8px",
                   textDecoration: "none",
+                  fontWeight: 600,
                 }}
               >
                 + New Lead
@@ -131,18 +191,18 @@ export default function LeadsPage() {
                   alignItems: "center",
                   gap: "20px",
                   padding: "20px",
-                  borderBottom:
-                    "1px solid #eeeeee",
+                  borderBottom: "1px solid #eeeeee",
                   textDecoration: "none",
                   color: "#111827",
                 }}
               >
                 <div
                   style={{
-                    width: "42px",
-                    height: "42px",
+                    width: "45px",
+                    height: "45px",
                     borderRadius: "50%",
                     background: "#eef2ff",
+                    color: "#4f46e5",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -155,38 +215,40 @@ export default function LeadsPage() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <strong>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      marginBottom: "5px",
+                    }}
+                  >
                     {lead.name}
-                  </strong>
+                  </div>
 
                   <div
                     style={{
                       color: "#6b7280",
                       fontSize: "13px",
-                      marginTop: "5px",
                     }}
                   >
-                    {lead.service ||
-                      "No service"}
+                    {lead.service || "No service"}
                   </div>
                 </div>
 
                 <div
                   style={{
-                    color: "#6b7280",
+                    flex: 1,
+                    color: "#4b5563",
                     fontSize: "13px",
                   }}
                 >
-                  {lead.phone ||
-                    lead.email ||
-                    ""}
+                  {lead.problem || "No description"}
                 </div>
 
                 <div
                   style={{
                     background: "#fef3c7",
                     color: "#92400e",
-                    padding: "6px 10px",
+                    padding: "6px 12px",
                     borderRadius: "20px",
                     fontSize: "12px",
                     fontWeight: 600,
@@ -195,7 +257,23 @@ export default function LeadsPage() {
                   {lead.status || "New"}
                 </div>
 
-                <div>→</div>
+                <div
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "13px",
+                  }}
+                >
+                  {lead.phone || lead.email || ""}
+                </div>
+
+                <div
+                  style={{
+                    color: "#9ca3af",
+                    fontSize: "20px",
+                  }}
+                >
+                  →
+                </div>
               </a>
             ))}
         </div>
@@ -203,4 +281,17 @@ export default function LeadsPage() {
     </main>
   );
 }
+
+const linkStyle = {
+  color: "#6b7280",
+  textDecoration: "none",
+  fontSize: "14px",
+};
+
+const activeLinkStyle = {
+  color: "#111827",
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 700,
+};
 ```
