@@ -6,14 +6,14 @@ export default function LeadsPage() {
     <main
       style={{
         minHeight: "100vh",
-        padding: "40px",
         background: "#f5f7fa",
+        padding: "40px",
         fontFamily: "Arial, sans-serif",
       }}
     >
       <div
         style={{
-          maxWidth: "1000px",
+          maxWidth: "1100px",
           margin: "0 auto",
         }}
       >
@@ -26,21 +26,12 @@ export default function LeadsPage() {
           }}
         >
           <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "32px",
-              }}
-            >
+            <h1 style={{ margin: 0 }}>
               Leads
             </h1>
 
-            <p
-              style={{
-                color: "#666",
-              }}
-            >
-              Manage your customers.
+            <p style={{ color: "#666" }}>
+              Manage your customers and leads.
             </p>
           </div>
 
@@ -62,19 +53,15 @@ export default function LeadsPage() {
         <div
           style={{
             background: "white",
+            border: "1px solid #e5e7eb",
             borderRadius: "12px",
-            border: "1px solid #ddd",
             padding: "30px",
           }}
         >
-          <h2>Your Customers</h2>
+          <h2>Customers</h2>
 
-          <p
-            style={{
-              color: "#666",
-            }}
-          >
-            Your leads will appear here.
+          <p style={{ color: "#666" }}>
+            Your customers will appear here.
           </p>
 
           <Link
@@ -89,7 +76,7 @@ export default function LeadsPage() {
               textDecoration: "none",
             }}
           >
-            Add Your First Customer
+            Add Customer
           </Link>
         </div>
       </div>
