@@ -1,4 +1,4 @@
-```tsx
+```tsx id="m9x4pz"
 import Link from "next/link";
 
 type Lead = {
@@ -10,14 +10,11 @@ type Lead = {
   status?: string | null;
 };
 
-async function getLeads(): Promise<Lead[]> {
+async function getLeads() {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/leads`,
-      {
-        cache: "no-store",
-      }
-    );
+    const response = await fetch("/api/leads", {
+      cache: "no-store",
+    });
 
     if (!response.ok) {
       return [];
@@ -32,7 +29,7 @@ async function getLeads(): Promise<Lead[]> {
 }
 
 export default async function LeadsPage() {
-  const leads = await getLeads();
+  const leads: Lead[] = await getLeads();
 
   return (
     <main
@@ -58,20 +55,9 @@ export default async function LeadsPage() {
           }}
         >
           <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "32px",
-              }}
-            >
-              Leads
-            </h1>
+            <h1>Leads</h1>
 
-            <p
-              style={{
-                color: "#6b7280",
-              }}
-            >
+            <p style={{ color: "#666" }}>
               Manage your customers and leads.
             </p>
           </div>
@@ -128,24 +114,20 @@ export default async function LeadsPage() {
             >
               <h2>No customers yet</h2>
 
-              <p
-                style={{
-                  color: "#6b7280",
-                  marginBottom: "25px",
-                }}
-              >
+              <p style={{ color: "#666" }}>
                 Add your first customer.
               </p>
 
               <Link
                 href="/leads/new"
                 style={{
+                  display: "inline-block",
+                  marginTop: "20px",
                   background: "#111827",
                   color: "white",
                   padding: "12px 20px",
                   borderRadius: "8px",
                   textDecoration: "none",
-                  fontWeight: "bold",
                 }}
               >
                 + Add Customer
@@ -161,7 +143,7 @@ export default async function LeadsPage() {
                   alignItems: "center",
                   gap: "20px",
                   padding: "20px",
-                  borderBottom: "1px solid #eeeeee",
+                  borderBottom: "1px solid #eee",
                   textDecoration: "none",
                   color: "#111827",
                 }}
@@ -172,7 +154,6 @@ export default async function LeadsPage() {
                     height: "45px",
                     borderRadius: "50%",
                     background: "#eef2ff",
-                    color: "#4f46e5",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -185,19 +166,13 @@ export default async function LeadsPage() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontWeight: "bold",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    {lead.name}
-                  </div>
+                  <strong>{lead.name}</strong>
 
                   <div
                     style={{
-                      color: "#6b7280",
+                      color: "#666",
                       fontSize: "13px",
+                      marginTop: "5px",
                     }}
                   >
                     {lead.service || "No service"}
@@ -206,7 +181,7 @@ export default async function LeadsPage() {
 
                 <div
                   style={{
-                    color: "#6b7280",
+                    color: "#666",
                     fontSize: "13px",
                   }}
                 >
@@ -226,12 +201,7 @@ export default async function LeadsPage() {
                   {lead.status || "New"}
                 </div>
 
-                <div
-                  style={{
-                    color: "#9ca3af",
-                    fontSize: "20px",
-                  }}
-                >
+                <div style={{ color: "#999" }}>
                   →
                 </div>
               </Link>
@@ -244,7 +214,7 @@ export default async function LeadsPage() {
 }
 
 const navStyle = {
-  color: "#6b7280",
+  color: "#666",
   textDecoration: "none",
   fontSize: "14px",
 };
