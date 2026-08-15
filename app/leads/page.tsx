@@ -1,3 +1,4 @@
+```tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,22 +6,18 @@ import { useEffect, useState } from "react";
 type Lead = {
   id: string;
   name: string;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  service: string | null;
-  problem: string | null;
-  status: string | null;
-  "quote amount": number | null;
-  "appointment date": string | null;
-  notes: string | null;
+  phone?: string | null;
+  email?: string | null;
+  service?: string | null;
+  problem?: string | null;
+  status?: string | null;
+  "appointment date"?: string | null;
+  "quote amount"?: number | null;
 };
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
     async function loadLeads() {
@@ -44,32 +41,14 @@ export default function LeadsPage() {
     loadLeads();
   }, []);
 
-  const filteredLeads = leads.filter((lead) => {
-    const searchText = search.toLowerCase();
-
-    const matchesSearch =
-      lead.name?.toLowerCase().includes(searchText) ||
-      lead.phone?.toLowerCase().includes(searchText) ||
-      lead.email?.toLowerCase().includes(searchText) ||
-      lead.service?.toLowerCase().includes(searchText);
-
-    const matchesStatus =
-      statusFilter === "All" ||
-      (lead.status || "New") === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
   return (
     <main style={styles.page}>
       <div style={styles.container}>
 
-        {/* NAVIGATION */}
-
         <nav style={styles.nav}>
-          <div style={styles.logo}>
+          <a href="/" style={styles.logo}>
             QuoteFlow
-          </div>
+          </a>
 
           <div style={styles.navLinks}>
             <a href="/" style={styles.navLink}>
@@ -87,183 +66,84 @@ export default function LeadsPage() {
             <a href="/appointments" style={styles.navLink}>
               Appointments
             </a>
-
-            <span style={styles.navLink}>
-              Contractor CRM
-            </span>
           </div>
         </nav>
 
-        {/* HEADER */}
-
         <div style={styles.header}>
           <div>
-            <h1 style={styles.title}>
-              Leads
-            </h1>
+            <h1 style={styles.title}>Leads</h1>
 
             <p style={styles.subtitle}>
-              Manage your customer requests and opportunities.
+              Manage your customers and leads.
             </p>
           </div>
 
-          <div style={styles.total}>
-            {leads.length} total leads
-          </div>
+          <a href="/leads/new" style={styles.newButton}>
+            + New Lead
+          </a>
         </div>
-
-        {/* FILTER BAR */}
-
-        <div style={styles.filterBar}>
-
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-            style={styles.search}
-          />
-
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value)
-            }
-            style={styles.filter}
-          >
-            <option value="All">
-              All statuses
-            </option>
-
-            <option value="New">
-              New
-            </option>
-
-            <option value="Contacted">
-              Contacted
-            </option>
-
-            <option value="Quoted">
-              Quoted
-            </option>
-
-            <option value="Scheduled">
-              Scheduled
-            </option>
-
-            <option value="Completed">
-              Completed
-            </option>
-
-            <option value="Cancelled">
-              Cancelled
-            </option>
-          </select>
-
-        </div>
-
-        {/* LEADS TABLE */}
 
         <section style={styles.card}>
 
           {loading ? (
-            <div style={styles.empty}>
+            <div style={styles.message}>
               Loading leads...
             </div>
-          ) : filteredLeads.length === 0 ? (
+          ) : leads.length === 0 ? (
             <div style={styles.empty}>
-              <h2 style={styles.emptyTitle}>
-                No leads found
-              </h2>
+              <h2>No leads yet</h2>
 
-              <p style={styles.emptyText}>
-                Try changing your search or status filter.
+              <p>
+                Add your first customer to get started.
               </p>
+
+              <a href="/leads/new" style={styles.newButton}>
+                + New Lead
+              </a>
             </div>
           ) : (
-            <div style={styles.table}>
+            <div>
 
-              <div style={styles.tableHeader}>
-                <div>Customer</div>
-                <div>Service</div>
-                <div>Status</div>
-                <div>Appointment</div>
-                <div>Quote</div>
-                <div></div>
-              </div>
-
-              {filteredLeads.map((lead) => (
-
+              {leads.map((lead) => (
                 <a
                   key={lead.id}
                   href={`/leads/${lead.id}`}
-                  style={styles.row}
+                  style={styles.lead}
                 >
+                  <div style={styles.avatar}>
+                    {(lead.name || "?")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
 
-                  <div style={styles.customer}>
-                    <div style={styles.avatar}>
-                      {lead.name
-                        ? lead.name.charAt(0).toUpperCase()
-                        : "?"}
+                  <div style={styles.info}>
+                    <div style={styles.name}>
+                      {lead.name}
                     </div>
 
-                    <div>
-                      <div style={styles.customerName}>
-                        {lead.name}
-                      </div>
-
-                      <div style={styles.customerContact}>
-                        {lead.phone || lead.email || "No contact"}
-                      </div>
+                    <div style={styles.service}>
+                      {lead.service || "No service"}
                     </div>
                   </div>
 
-                  <div style={styles.service}>
-                    {lead.service || "—"}
+                  <div style={styles.problem}>
+                    {lead.problem || "No description"}
                   </div>
 
                   <div>
-                    <span
-                      style={{
-                        ...styles.status,
-                        ...(lead.status === "Completed"
-                          ? styles.completed
-                          : lead.status === "Quoted"
-                          ? styles.quoted
-                          : lead.status === "Scheduled"
-                          ? styles.scheduled
-                          : {}),
-                      }}
-                    >
+                    <span style={styles.status}>
                       {lead.status || "New"}
                     </span>
                   </div>
 
-                  <div style={styles.appointment}>
-                    {lead["appointment date"]
-                      ? formatDate(
-                          lead["appointment date"]
-                        )
-                      : "Not scheduled"}
-                  </div>
-
-                  <div style={styles.quote}>
-                    {lead["quote amount"] !== null &&
-                    lead["quote amount"] !== undefined
-                      ? `$${Number(
-                          lead["quote amount"]
-                        ).toLocaleString()}`
-                      : "—"}
+                  <div style={styles.phone}>
+                    {lead.phone || lead.email || ""}
                   </div>
 
                   <div style={styles.arrow}>
                     →
                   </div>
-
                 </a>
-
               ))}
 
             </div>
@@ -276,29 +156,18 @@ export default function LeadsPage() {
   );
 }
 
-function formatDate(date: string) {
-  const parts = date.split("-");
-
-  if (parts.length !== 3) {
-    return date;
-  }
-
-  return `${parts[1]}/${parts[2]}/${parts[0]}`;
-}
-
 const styles = {
   page: {
     minHeight: "100vh",
     background: "#f5f7fa",
     color: "#111827",
-    fontFamily:
-      "Arial, Helvetica, sans-serif",
+    fontFamily: "Arial, Helvetica, sans-serif",
   },
 
   container: {
-    maxWidth: "1250px",
+    maxWidth: "1200px",
     margin: "0 auto",
-    padding: "0 30px 50px",
+    padding: "0 30px 60px",
   },
 
   nav: {
@@ -311,21 +180,22 @@ const styles = {
   },
 
   logo: {
+    color: "#111827",
+    textDecoration: "none",
     fontSize: "22px",
     fontWeight: 800,
   },
 
   navLinks: {
     display: "flex",
-    alignItems: "center",
     gap: "28px",
+    alignItems: "center",
   },
 
   navLink: {
     color: "#6b7280",
     textDecoration: "none",
     fontSize: "14px",
-    fontWeight: 500,
   },
 
   activeLink: {
@@ -345,42 +215,21 @@ const styles = {
   title: {
     margin: 0,
     fontSize: "32px",
-    fontWeight: 700,
   },
 
   subtitle: {
+    color: "#6b7280",
     marginTop: "8px",
-    color: "#6b7280",
-    fontSize: "15px",
   },
 
-  total: {
-    color: "#6b7280",
-    fontSize: "14px",
-  },
-
-  filterBar: {
-    display: "flex",
-    gap: "12px",
-    marginBottom: "20px",
-  },
-
-  search: {
-    flex: 1,
-    padding: "12px 14px",
-    border: "1px solid #d1d5db",
+  newButton: {
+    background: "#111827",
+    color: "white",
+    padding: "11px 18px",
     borderRadius: "8px",
+    textDecoration: "none",
     fontSize: "14px",
-    outline: "none",
-  },
-
-  filter: {
-    width: "180px",
-    padding: "12px 14px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    background: "white",
-    fontSize: "14px",
+    fontWeight: 600,
   },
 
   card: {
@@ -390,39 +239,16 @@ const styles = {
     overflow: "hidden",
   },
 
-  table: {
-    width: "100%",
-  },
-
-  tableHeader: {
+  lead: {
     display: "grid",
     gridTemplateColumns:
-      "2fr 1.2fr 1fr 1.2fr 1fr 30px",
-    gap: "15px",
-    padding: "14px 20px",
-    background: "#f9fafb",
-    borderBottom: "1px solid #e5e7eb",
-    color: "#6b7280",
-    fontSize: "12px",
-    fontWeight: 700,
-  },
-
-  row: {
-    display: "grid",
-    gridTemplateColumns:
-      "2fr 1.2fr 1fr 1.2fr 1fr 30px",
+      "45px 1.5fr 2fr 1fr 1.5fr 25px",
     gap: "15px",
     alignItems: "center",
     padding: "17px 20px",
     borderBottom: "1px solid #f0f0f0",
-    color: "#111827",
     textDecoration: "none",
-  },
-
-  customer: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
+    color: "#111827",
   },
 
   avatar: {
@@ -437,55 +263,41 @@ const styles = {
     fontWeight: 700,
   },
 
-  customerName: {
-    fontSize: "14px",
-    fontWeight: 600,
-    marginBottom: "3px",
+  info: {
+    minWidth: 0,
   },
 
-  customerContact: {
-    color: "#9ca3af",
-    fontSize: "12px",
+  name: {
+    fontWeight: 600,
+    fontSize: "14px",
+    marginBottom: "4px",
   },
 
   service: {
+    color: "#6b7280",
+    fontSize: "12px",
+  },
+
+  problem: {
+    color: "#4b5563",
     fontSize: "13px",
-    color: "#374151",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
   },
 
   status: {
-    display: "inline-block",
-    background: "#dbeafe",
-    color: "#1d4ed8",
+    background: "#fef3c7",
+    color: "#92400e",
     padding: "6px 10px",
     borderRadius: "999px",
     fontSize: "11px",
     fontWeight: 700,
   },
 
-  completed: {
-    background: "#dcfce7",
-    color: "#166534",
-  },
-
-  quoted: {
-    background: "#fef3c7",
-    color: "#92400e",
-  },
-
-  scheduled: {
-    background: "#ede9fe",
-    color: "#6d28d9",
-  },
-
-  appointment: {
-    fontSize: "13px",
-    color: "#374151",
-  },
-
-  quote: {
-    fontSize: "13px",
-    fontWeight: 600,
+  phone: {
+    color: "#6b7280",
+    fontSize: "12px",
   },
 
   arrow: {
@@ -493,18 +305,15 @@ const styles = {
     fontSize: "18px",
   },
 
-  empty: {
-    padding: "70px 20px",
+  message: {
+    padding: "50px",
     textAlign: "center" as const,
-  },
-
-  emptyTitle: {
-    margin: 0,
-    fontSize: "18px",
-  },
-
-  emptyText: {
     color: "#6b7280",
-    fontSize: "14px",
+  },
+
+  empty: {
+    textAlign: "center" as const,
+    padding: "60px 20px",
   },
 };
+```
