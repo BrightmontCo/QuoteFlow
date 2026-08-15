@@ -22,25 +22,33 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/leads", { cache: "no-store" })
+    fetch("/api/leads", {
+      cache: "no-store",
+    })
       .then((res) => res.json())
       .then((result) => {
         if (result.success) {
           setLeads(result.data || []);
         }
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; }
+        * {
+          box-sizing: border-box;
+        }
 
         body {
           margin: 0;
-          font-family: Arial, sans-serif;
+          font-family: Arial, Helvetica, sans-serif;
           background: #f5f7fa;
           color: #111827;
         }
@@ -52,7 +60,7 @@ export default function LeadsPage() {
 
         .container {
           max-width: 1100px;
-          margin: auto;
+          margin: 0 auto;
         }
 
         .top {
@@ -67,31 +75,45 @@ export default function LeadsPage() {
           font-size: 30px;
         }
 
-        .back {
-          text-decoration: none;
-          color: #374151;
-          background: white;
-          border: 1px solid #e5e7eb;
-          padding: 10px 16px;
-          border-radius: 8px;
-        }
-
         .count {
           color: #6b7280;
           margin-top: 8px;
         }
 
+        .back {
+          padding: 10px 16px;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          color: #374151;
+          text-decoration: none;
+        }
+
+        .back:hover {
+          background: #f9fafb;
+        }
+
         .card {
+          display: block;
           background: white;
           border: 1px solid #e5e7eb;
           border-radius: 12px;
           padding: 24px;
           margin-bottom: 16px;
+          text-decoration: none;
+          color: inherit;
+          transition: 0.15s;
+        }
+
+        .card:hover {
+          border-color: #9ca3af;
+          transform: translateY(-1px);
         }
 
         .top-row {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           gap: 20px;
         }
 
@@ -137,6 +159,7 @@ export default function LeadsPage() {
           background: #f9fafb;
           padding: 15px;
           border-radius: 8px;
+          color: #4b5563;
         }
 
         .empty {
@@ -151,8 +174,15 @@ export default function LeadsPage() {
             padding: 20px;
           }
 
+          .top {
+            align-items: flex-start;
+            gap: 15px;
+            flex-direction: column;
+          }
+
           .top-row {
             flex-direction: column;
+            align-items: flex-start;
           }
 
           .details {
@@ -162,11 +192,9 @@ export default function LeadsPage() {
       `}</style>
 
       <div className="page">
-
         <div className="container">
 
           <div className="top">
-
             <div>
               <h1>Leads</h1>
 
@@ -180,31 +208,27 @@ export default function LeadsPage() {
             <a href="/" className="back">
               ← Dashboard
             </a>
-
           </div>
 
           {loading ? (
-
             <div className="empty">
               Loading leads...
             </div>
-
           ) : leads.length === 0 ? (
-
             <div className="empty">
               No leads yet.
             </div>
-
           ) : (
-
             leads.map((lead) => (
-
-              <div className="card" key={lead.id}>
+              <a
+                href={`/leads/${lead.id}`}
+                className="card"
+                key={lead.id}
+              >
 
                 <div className="top-row">
 
                   <div>
-
                     <div className="name">
                       {lead.name}
                     </div>
@@ -212,14 +236,11 @@ export default function LeadsPage() {
                     <div className="service">
                       {lead.service || "No service specified"}
                     </div>
-
                   </div>
 
-                  <div>
-                    <span className="status">
-                      {lead.status || "New"}
-                    </span>
-                  </div>
+                  <span className="status">
+                    {lead.status || "New"}
+                  </span>
 
                 </div>
 
@@ -245,13 +266,6 @@ export default function LeadsPage() {
                     {lead["appointment date"] || "—"}
                   </div>
 
-                  <div className="detail">
-                    <strong>Quote:</strong>{" "}
-                    {lead["quote amount"]
-                      ? `$${lead["quote amount"]}`
-                      : "Not quoted"}
-                  </div>
-
                 </div>
 
                 {lead.problem && (
@@ -261,14 +275,11 @@ export default function LeadsPage() {
                   </div>
                 )}
 
-              </div>
-
+              </a>
             ))
-
           )}
 
         </div>
-
       </div>
     </>
   );
