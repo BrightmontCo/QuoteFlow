@@ -30,12 +30,20 @@ export default function QuotesPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Could not load customers");
+        throw new Error(data.error || "Could not load customers");
       }
 
-      setCustomers(Array.isArray(data) ? data : data.leads || []);
+      if (Array.isArray(data)) {
+        setCustomers(data);
+      } else {
+        setCustomers(data.leads || []);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load customers");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Could not load customers");
+      }
     } finally {
       setLoading(false);
     }
@@ -45,35 +53,44 @@ export default function QuotesPage() {
     try {
       setError("");
 
-      const response = await fetch(`/api/leads/${id}`, {
+      const response = await fetch("/api/leads/" + id, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          status,
+          status: status,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Could not update quote");
+        throw new Error(data.error || "Could not update quote");
       }
 
-      setCustomers((current) =>
-        current.map((customer) =>
-          customer.id === id
-            ? { ...customer, status }
-            : customer
-        )
-      );
+      setCustomers(function (current) {
+        return current.map(function (customer) {
+          if (customer.id === id) {
+            return {
+              ...customer,
+              status: status,
+            };
+          }
+
+          return customer;
+        });
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not update quote");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Could not update quote");
+      }
     }
   }
 
-  useEffect(() => {
+  useEffect(function () {
     loadCustomers();
   }, []);
 
@@ -186,110 +203,112 @@ export default function QuotesPage() {
               gap: "16px",
             }}
           >
-            {customers.map((customer) => (
-              <div
-                key={customer.id}
-                style={{
-                  background: "white",
-                  borderRadius: "12px",
-                  padding: "22px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                }}
-              >
+            {customers.map(function (customer) {
+              return (
                 <div
+                  key={customer.id}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "20px",
-                    flexWrap: "wrap",
+                    background: "white",
+                    borderRadius: "12px",
+                    padding: "22px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                   }}
                 >
-                  <div>
-                    <h2
-                      style={{
-                        margin: "0 0 8px",
-                        color: "#111827",
-                        fontSize: "20px",
-                      }}
-                    >
-                      {customer.full_name ||
-                        customer.name ||
-                        "Customer"}
-                    </h2>
-
-                    {customer.email && (
-                      <p
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "20px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <h2
                         style={{
-                          margin: "5px 0",
+                          margin: "0 0 8px",
+                          color: "#111827",
+                          fontSize: "20px",
+                        }}
+                      >
+                        {customer.full_name ||
+                          customer.name ||
+                          "Customer"}
+                      </h2>
+
+                      {customer.email && (
+                        <p
+                          style={{
+                            margin: "5px 0",
+                            color: "#6b7280",
+                          }}
+                        >
+                          Email: {customer.email}
+                        </p>
+                      )}
+
+                      {customer.phone && (
+                        <p
+                          style={{
+                            margin: "5px 0",
+                            color: "#6b7280",
+                          }}
+                        >
+                          Phone: {customer.phone}
+                        </p>
+                      )}
+
+                      {customer.service && (
+                        <p
+                          style={{
+                            margin: "5px 0",
+                            color: "#374151",
+                          }}
+                        >
+                          Service: {customer.service}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "13px",
                           color: "#6b7280",
+                          marginBottom: "6px",
                         }}
                       >
-                        Email: {customer.email}
-                      </p>
-                    )}
+                        Status
+                      </label>
 
-                    {customer.phone && (
-                      <p
+                      <select
+                        value={customer.status || "new"}
+                        onChange={function (event) {
+                          updateStatus(
+                            customer.id,
+                            event.target.value
+                          );
+                        }}
                         style={{
-                          margin: "5px 0",
-                          color: "#6b7280",
+                          padding: "10px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          background: "white",
+                          minWidth: "150px",
                         }}
                       >
-                        Phone: {customer.phone}
-                      </p>
-                    )}
-
-                    {customer.service && (
-                      <p
-                        style={{
-                          margin: "5px 0",
-                          color: "#374151",
-                        }}
-                      >
-                        Service: {customer.service}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      style={{
-                        display: "block",
-                        fontSize: "13px",
-                        color: "#6b7280",
-                        marginBottom: "6px",
-                      }}
-                    >
-                      Status
-                    </label>
-
-                    <select
-                      value={customer.status || "new"}
-                      onChange={(event) =>
-                        updateStatus(
-                          customer.id,
-                          event.target.value
-                        )
-                      }
-                      style={{
-                        padding: "10px 12px",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        background: "white",
-                        minWidth: "150px",
-                      }}
-                    >
-                      <option value="new">New</option>
-                      <option value="contacted">Contacted</option>
-                      <option value="quoted">Quoted</option>
-                      <option value="approved">Approved</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="approved">Approved</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
