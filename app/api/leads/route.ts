@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   try {
     const supabase = getSupabase();
     const id = new URL(request.url).searchParams.get("id");
-    let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
+    let query = supabase.from("leads").select("*");
     if (id) query = query.eq("id", id);
     const { data, error } = await query;
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
