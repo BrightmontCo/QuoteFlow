@@ -19,48 +19,54 @@ type Lead = {
 
 export default function LeadDetails() {
   const params = useParams();
-  const id = params.id as string;
+  const id = String(params.id);
 
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const [status, setStatus] = useState("");
   const [quoteAmount, setQuoteAmount] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function loadLead() {
       try {
-        const response = await fetch("/api/leads", {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/leads?id=${encodeURIComponent(id)}`,
+          { cache: "no-store" }
+        );
 
         const result = await response.json();
 
-        if (result.success) {
-          const found = result.data.find(
-            (item: Lead) => item.id === id
-          );
-
-          if (found) {
-            setLead(found);
-            setStatus(found.status || "New");
-            setQuoteAmount(
-              found["quote amount"] !== null
-                ? String(found["quote amount"])
-                : ""
-            );
-            setAppointmentDate(
-              found["appointment date"] || ""
-            );
-            setNotes(found.notes || "");
-          }
+        if (!result.success) {
+          setError(result.error || "Unable to load customer.");
+          return;
         }
-      } catch (error) {
-        console.error(error);
+
+        if (!result.data || result.data.length === 0) {
+          setError("Customer not found.");
+          return;
+        }
+
+        const found = result.data[0];
+
+        setLead(found);
+        setStatus(found.status || "New");
+        setQuoteAmount(
+          found["quote amount"] != null
+            ? String(found["quote amount"])
+            : ""
+        );
+        setAppointmentDate(
+          found["appointment date"] || ""
+        );
+        setNotes(found.notes || "");
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load customer.");
       } finally {
         setLoading(false);
       }
@@ -71,7 +77,6 @@ export default function LeadDetails() {
 
   async function saveChanges() {
     setSaving(true);
-    setMessage("");
 
     try {
       const response = await fetch("/api/leads", {
@@ -91,29 +96,30 @@ export default function LeadDetails() {
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(
-          result.error || "Unable to save changes"
-        );
+        alert(result.error || "Unable to save changes.");
+        return;
       }
-
-      setMessage("Changes saved successfully.");
 
       setLead((current) =>
         current
           ? {
               ...current,
               status,
-              "quote amount": quoteAmount
-                ? Number(quoteAmount)
-                : null,
-              "appointment date": appointmentDate || null,
+              "quote amount":
+                quoteAmount === ""
+                  ? null
+                  : Number(quoteAmount),
+              "appointment date":
+                appointmentDate || null,
               notes: notes || null,
             }
           : current
       );
-    } catch (error) {
-      console.error(error);
-      setMessage("Unable to save changes.");
+
+      alert("Changes saved!");
+    } catch (err) {
+      console.error(err);
+      alert("Unable to save changes.");
     } finally {
       setSaving(false);
     }
@@ -121,365 +127,173 @@ export default function LeadDetails() {
 
   if (loading) {
     return (
-      <div className="page">
-        <div className="container">
+      <main style={styles.page}>
+        <div style={styles.container}>
           <p>Loading customer...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
-  if (!lead) {
+  if (error || !lead) {
     return (
-      <div className="page">
-        <div className="container">
-          <h1>Customer not found</h1>
-
-          <a href="/leads" className="back">
+      <main style={styles.page}>
+        <div style={styles.container}>
+          <a href="/leads" style={styles.back}>
             ← Back to Leads
           </a>
+
+          <div style={styles.card}>
+            <h1>Customer not found</h1>
+            <p>{error}</p>
+            <p style={styles.small}>
+              Customer ID: {id}
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <>
-      <style>{`
-        * {
-          box-sizing: border-box;
-        }
+    <main style={styles.page}>
+      <div style={styles.container}>
 
-        body {
-          margin: 0;
-          font-family: Arial, Helvetica, sans-serif;
-          background: #f5f7fa;
-          color: #111827;
-        }
+        <a href="/leads" style={styles.back}>
+          ← Back to Leads
+        </a>
 
-        .page {
-          min-height: 100vh;
-          padding: 40px;
-        }
+        <div style={styles.header}>
+          <div>
+            <h1 style={styles.title}>
+              {lead.name}
+            </h1>
 
-        .container {
-          max-width: 1100px;
-          margin: 0 auto;
-        }
-
-        .back {
-          display: inline-block;
-          margin-bottom: 30px;
-          padding: 10px 16px;
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          color: #374151;
-          text-decoration: none;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 30px;
-          gap: 20px;
-        }
-
-        .title {
-          margin: 0;
-          font-size: 32px;
-        }
-
-        .subtitle {
-          margin-top: 8px;
-          color: #6b7280;
-        }
-
-        .status-badge {
-          background: #dbeafe;
-          color: #1d4ed8;
-          padding: 8px 14px;
-          border-radius: 999px;
-          font-size: 13px;
-          font-weight: 600;
-        }
-
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 20px;
-        }
-
-        .card {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 24px;
-          margin-bottom: 20px;
-        }
-
-        .card-title {
-          margin: 0 0 20px;
-          font-size: 18px;
-        }
-
-        .info {
-          margin-bottom: 18px;
-        }
-
-        .label {
-          color: #6b7280;
-          font-size: 12px;
-          margin-bottom: 6px;
-        }
-
-        .value {
-          font-size: 15px;
-        }
-
-        input,
-        select,
-        textarea {
-          width: 100%;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          padding: 11px 12px;
-          font-size: 14px;
-          font-family: inherit;
-          background: white;
-        }
-
-        textarea {
-          min-height: 120px;
-          resize: vertical;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-          outline: none;
-          border-color: #2563eb;
-        }
-
-        .quote {
-          font-size: 28px;
-          font-weight: 700;
-        }
-
-        .save-section {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 24px;
-          margin-top: 0;
-        }
-
-        .save-button {
-          border: none;
-          background: #111827;
-          color: white;
-          padding: 12px 22px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-        }
-
-        .save-button:hover {
-          background: #374151;
-        }
-
-        .save-button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .message {
-          margin-top: 14px;
-          color: #166534;
-          font-size: 14px;
-        }
-
-        .problem {
-          color: #4b5563;
-          line-height: 1.6;
-        }
-
-        @media (max-width: 700px) {
-          .page {
-            padding: 20px;
-          }
-
-          .header {
-            align-items: flex-start;
-            flex-direction: column;
-          }
-
-          .grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-
-      <div className="page">
-        <div className="container">
-
-          <a href="/leads" className="back">
-            ← Back to Leads
-          </a>
-
-          <div className="header">
-            <div>
-              <h1 className="title">
-                {lead.name}
-              </h1>
-
-              <div className="subtitle">
-                {lead.service || "HVAC Service"}
-              </div>
-            </div>
-
-            <div className="status-badge">
-              {status || "New"}
-            </div>
+            <p style={styles.subtitle}>
+              {lead.service || "HVAC Service"}
+            </p>
           </div>
 
-          <div className="grid">
+          <span style={styles.badge}>
+            {status || "New"}
+          </span>
+        </div>
 
-            <div className="card">
-              <h2 className="card-title">
-                Customer Information
-              </h2>
+        <div style={styles.grid}>
 
-              <Info label="Phone" value={lead.phone} />
-              <Info label="Email" value={lead.email} />
-              <Info label="Address" value={lead.address} />
-            </div>
-
-            <div className="card">
-              <h2 className="card-title">
-                Service Request
-              </h2>
-
-              <Info label="Service" value={lead.service} />
-
-              <div className="info">
-                <div className="label">
-                  Problem
-                </div>
-
-                <div className="problem">
-                  {lead.problem || "—"}
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <h2 className="card-title">
-                Manage Appointment
-              </h2>
-
-              <div className="info">
-                <div className="label">
-                  Appointment Date
-                </div>
-
-                <input
-                  type="date"
-                  value={appointmentDate}
-                  onChange={(e) =>
-                    setAppointmentDate(e.target.value)
-                  }
-                />
-              </div>
-
-              <div className="info">
-                <div className="label">
-                  Status
-                </div>
-
-                <select
-                  value={status}
-                  onChange={(e) =>
-                    setStatus(e.target.value)
-                  }
-                >
-                  <option value="New">New</option>
-                  <option value="Contacted">Contacted</option>
-                  <option value="Quoted">Quoted</option>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="card">
-              <h2 className="card-title">
-                Quote
-              </h2>
-
-              <div className="info">
-                <div className="label">
-                  Quote Amount
-                </div>
-
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={quoteAmount}
-                  onChange={(e) =>
-                    setQuoteAmount(e.target.value)
-                  }
-                />
-              </div>
-
-              <div className="quote">
-                $
-                {quoteAmount
-                  ? Number(quoteAmount).toFixed(2)
-                  : "0.00"}
-              </div>
-            </div>
-
-          </div>
-
-          <div className="card">
-            <h2 className="card-title">
-              Notes
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>
+              Customer Information
             </h2>
 
-            <textarea
-              placeholder="Add notes about this customer..."
-              value={notes}
-              onChange={(e) =>
-                setNotes(e.target.value)
-              }
-            />
+            <Info label="Phone" value={lead.phone} />
+            <Info label="Email" value={lead.email} />
+            <Info label="Address" value={lead.address} />
           </div>
 
-          <div className="save-section">
-            <button
-              className="save-button"
-              onClick={saveChanges}
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>
+              Service Request
+            </h2>
 
-            {message && (
-              <div className="message">
-                {message}
-              </div>
-            )}
+            <Info label="Service" value={lead.service} />
+            <Info label="Problem" value={lead.problem} />
+          </div>
+
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>
+              Appointment
+            </h2>
+
+            <label style={styles.label}>
+              Appointment Date
+            </label>
+
+            <input
+              type="date"
+              value={appointmentDate}
+              onChange={(e) =>
+                setAppointmentDate(e.target.value)
+              }
+              style={styles.input}
+            />
+
+            <label style={styles.label}>
+              Status
+            </label>
+
+            <select
+              value={status}
+              onChange={(e) =>
+                setStatus(e.target.value)
+              }
+              style={styles.input}
+            >
+              <option>New</option>
+              <option>Contacted</option>
+              <option>Quoted</option>
+              <option>Scheduled</option>
+              <option>Completed</option>
+              <option>Cancelled</option>
+            </select>
+          </div>
+
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>
+              Quote
+            </h2>
+
+            <label style={styles.label}>
+              Quote Amount
+            </label>
+
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={quoteAmount}
+              onChange={(e) =>
+                setQuoteAmount(e.target.value)
+              }
+              placeholder="0.00"
+              style={styles.input}
+            />
+
+            <div style={styles.quote}>
+              $
+              {quoteAmount
+                ? Number(quoteAmount).toFixed(2)
+                : "0.00"}
+            </div>
           </div>
 
         </div>
+
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>
+            Notes
+          </h2>
+
+          <textarea
+            value={notes}
+            onChange={(e) =>
+              setNotes(e.target.value)
+            }
+            placeholder="Add notes..."
+            style={styles.textarea}
+          />
+        </div>
+
+        <button
+          onClick={saveChanges}
+          disabled={saving}
+          style={styles.button}
+        >
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+
       </div>
-    </>
+    </main>
   );
 }
 
@@ -488,17 +302,140 @@ function Info({
   value,
 }: {
   label: string;
-  value: string | number | null;
+  value: string | null;
 }) {
   return (
-    <div className="info">
-      <div className="label">
+    <div style={styles.info}>
+      <div style={styles.label}>
         {label}
       </div>
 
-      <div className="value">
+      <div style={styles.value}>
         {value || "—"}
       </div>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#f5f7fa",
+    padding: "40px",
+    fontFamily: "Arial, sans-serif",
+    color: "#111827",
+  },
+
+  container: {
+    maxWidth: "1100px",
+    margin: "0 auto",
+  },
+
+  back: {
+    display: "inline-block",
+    marginBottom: "30px",
+    color: "#374151",
+    textDecoration: "none",
+  },
+
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "30px",
+  },
+
+  title: {
+    margin: 0,
+    fontSize: "32px",
+  },
+
+  subtitle: {
+    color: "#6b7280",
+  },
+
+  badge: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    fontWeight: 600,
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "20px",
+  },
+
+  card: {
+    background: "white",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "24px",
+    marginBottom: "20px",
+  },
+
+  cardTitle: {
+    marginTop: 0,
+    marginBottom: "20px",
+    fontSize: "18px",
+  },
+
+  info: {
+    marginBottom: "18px",
+  },
+
+  label: {
+    display: "block",
+    color: "#6b7280",
+    fontSize: "13px",
+    marginBottom: "7px",
+    marginTop: "15px",
+  },
+
+  value: {
+    fontSize: "15px",
+  },
+
+  input: {
+    width: "100%",
+    padding: "11px",
+    border: "1px solid #d1d5db",
+    borderRadius: "8px",
+    fontSize: "14px",
+    background: "white",
+  },
+
+  textarea: {
+    width: "100%",
+    minHeight: "120px",
+    padding: "12px",
+    border: "1px solid #d1d5db",
+    borderRadius: "8px",
+    fontSize: "14px",
+    resize: "vertical",
+  },
+
+  quote: {
+    marginTop: "20px",
+    fontSize: "28px",
+    fontWeight: 700,
+  },
+
+  button: {
+    background: "#111827",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    padding: "13px 24px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+
+  small: {
+    color: "#6b7280",
+    fontSize: "13px",
+  },
+};
