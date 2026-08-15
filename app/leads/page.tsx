@@ -1,4 +1,3 @@
-```tsx id="0g9v2m"
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,18 +17,16 @@ export default function LeadsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadLeads() {
-      try {
-        const response = await fetch("/api/leads", {
-          cache: "no-store",
-        });
-
+    fetch("/api/leads", {
+      cache: "no-store",
+    })
+      .then((response) => {
         if (!response.ok) {
-          throw new Error("Could not load leads");
+          throw new Error("Failed");
         }
-
-        const data = await response.json();
-
+        return response.json();
+      })
+      .then((data) => {
         if (Array.isArray(data)) {
           setLeads(data);
         } else if (Array.isArray(data.leads)) {
@@ -37,14 +34,13 @@ export default function LeadsPage() {
         } else {
           setLeads([]);
         }
-      } catch {
+      })
+      .catch(() => {
         setError("Could not load customers.");
-      } finally {
+      })
+      .finally(() => {
         setLoading(false);
-      }
-    }
-
-    loadLeads();
+      });
   }, []);
 
   return (
@@ -62,35 +58,11 @@ export default function LeadsPage() {
           margin: "0 auto",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "30px",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "32px",
-                color: "#111827",
-              }}
-            >
-              Customers
-            </h1>
+        <h1 style={{ color: "#111827" }}>Customers</h1>
 
-            <p
-              style={{
-                color: "#6b7280",
-                marginTop: "8px",
-              }}
-            >
-              Manage your QuoteFlow customers.
-            </p>
-          </div>
-        </div>
+        <p style={{ color: "#6b7280" }}>
+          Manage your QuoteFlow customers.
+        </p>
 
         {loading && (
           <div
@@ -98,7 +70,7 @@ export default function LeadsPage() {
               background: "white",
               padding: "30px",
               borderRadius: "12px",
-              border: "1px solid #e5e7eb",
+              marginTop: "25px",
             }}
           >
             Loading customers...
@@ -110,9 +82,9 @@ export default function LeadsPage() {
             style={{
               background: "#fee2e2",
               color: "#991b1b",
-              padding: "16px",
+              padding: "15px",
               borderRadius: "10px",
-              marginBottom: "20px",
+              marginTop: "25px",
             }}
           >
             {error}
@@ -125,7 +97,7 @@ export default function LeadsPage() {
               background: "white",
               padding: "40px",
               borderRadius: "12px",
-              border: "1px solid #e5e7eb",
+              marginTop: "25px",
               textAlign: "center",
             }}
           >
@@ -141,12 +113,13 @@ export default function LeadsPage() {
             style={{
               display: "grid",
               gap: "15px",
+              marginTop: "25px",
             }}
           >
             {leads.map((lead) => (
               <a
                 key={lead.id}
-                href={`/leads/${lead.id}`}
+                href={"/leads/" + lead.id}
                 style={{
                   display: "block",
                   background: "white",
@@ -161,20 +134,15 @@ export default function LeadsPage() {
                   {lead.full_name || lead.name || "Unnamed Customer"}
                 </h3>
 
-                <p style={{ margin: "4px 0", color: "#6b7280" }}>
+                <p style={{ margin: "5px 0", color: "#6b7280" }}>
                   {lead.email || "No email"}
                 </p>
 
-                <p style={{ margin: "4px 0", color: "#6b7280" }}>
+                <p style={{ margin: "5px 0", color: "#6b7280" }}>
                   {lead.phone || "No phone"}
                 </p>
 
-                <p
-                  style={{
-                    marginTop: "12px",
-                    fontWeight: "bold",
-                  }}
-                >
+                <p style={{ marginTop: "12px", fontWeight: "bold" }}>
                   Status: {lead.status || "New"}
                 </p>
               </a>
@@ -185,4 +153,3 @@ export default function LeadsPage() {
     </main>
   );
 }
-```
