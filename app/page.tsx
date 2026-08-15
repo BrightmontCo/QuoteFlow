@@ -13,7 +13,6 @@ type Lead = {
   status: string | null;
   "quote amount": number | null;
   "appointment date": string | null;
-  notes: string | null;
 };
 
 export default function Dashboard() {
@@ -33,7 +32,7 @@ export default function Dashboard() {
           setLeads(result.data || []);
         }
       } catch (error) {
-        console.error(error);
+        console.error("Unable to load dashboard:", error);
       } finally {
         setLoading(false);
       }
@@ -43,18 +42,34 @@ export default function Dashboard() {
   }, []);
 
   const newLeads = leads.filter(
-    (lead) => (lead.status || "New") === "New"
-  ).length;
+    (lead) =>
+      !lead.status ||
+      lead.status.toLowerCase() === "new"
+  );
 
   const quotesAwaiting = leads.filter(
-    (lead) => lead.status === "Quoted"
-  ).length;
-
-  const appointments = leads.filter(
     (lead) =>
-      lead["appointment date"] !== null &&
-      lead["appointment date"] !== ""
-  ).length;
+      lead["quote amount"] !== null &&
+      lead["quote amount"] !== undefined &&
+      lead.status?.toLowerCase() !== "completed"
+  );
+
+  const upcomingAppointments = leads.filter(
+    (lead) => {
+      if (!lead["appointment date"]) {
+        return false;
+      }
+
+      const appointmentDate = new Date(
+        lead["appointment date"]
+      );
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      return appointmentDate >= today;
+    }
+  );
 
   const pipelineValue = leads.reduce(
     (total, lead) =>
@@ -62,31 +77,45 @@ export default function Dashboard() {
     0
   );
 
+  const recentLeads = [...leads].slice(0, 5);
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
 
-        {/* TOP NAVIGATION */}
+        {/* NAVIGATION */}
 
         <nav style={styles.nav}>
-          <div style={styles.logo}>
+          <a href="/" style={styles.logo}>
             QuoteFlow
-          </div>
+          </a>
 
           <div style={styles.navLinks}>
-            <a href="/" style={styles.activeLink}>
+            <a
+              href="/"
+              style={styles.activeLink}
+            >
               Dashboard
             </a>
 
-            <a href="/leads" style={styles.navLink}>
+            <a
+              href="/leads"
+              style={styles.navLink}
+            >
               Leads
             </a>
 
-            <a href="/quotes" style={styles.navLink}>
+            <a
+              href="/quotes"
+              style={styles.navLink}
+            >
               Quotes
             </a>
 
-            <a href="/appointments" style={styles.navLink}>
+            <a
+              href="/appointments"
+              style={styles.navLink}
+            >
               Appointments
             </a>
 
@@ -109,160 +138,319 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <a href="/leads" style={styles.newLeadButton}>
+          <a
+            href="/leads"
+            style={styles.viewLeadsButton}
+          >
             View Leads
           </a>
         </div>
 
-        {/* STAT CARDS */}
+        {/* STATS */}
 
         <div style={styles.stats}>
 
-          <div style={styles.statCard}>
+          <a
+            href="/leads"
+            style={styles.statCard}
+          >
             <div style={styles.statLabel}>
               New Leads
             </div>
 
-            <div style={styles.statNumber}>
-              {loading ? "—" : newLeads}
+            <div style={styles.statValue}>
+              {loading ? "—" : newLeads.length}
             </div>
 
-            <div style={styles.statDescription}>
-              New customer requests
+            <div style={styles.statLink}>
+              View leads →
             </div>
-          </div>
+          </a>
 
-          <div style={styles.statCard}>
+          <a
+            href="/quotes"
+            style={styles.statCard}
+          >
             <div style={styles.statLabel}>
               Quotes Awaiting
             </div>
 
-            <div style={styles.statNumber}>
-              {loading ? "—" : quotesAwaiting}
+            <div style={styles.statValue}>
+              {loading
+                ? "—"
+                : quotesAwaiting.length}
             </div>
 
-            <div style={styles.statDescription}>
-              Quotes to follow up
+            <div style={styles.statLink}>
+              View quotes →
             </div>
-          </div>
+          </a>
 
-          <div style={styles.statCard}>
+          <a
+            href="/appointments"
+            style={styles.statCard}
+          >
             <div style={styles.statLabel}>
               Appointments
             </div>
 
-            <div style={styles.statNumber}>
-              {loading ? "—" : appointments}
+            <div style={styles.statValue}>
+              {loading
+                ? "—"
+                : upcomingAppointments.length}
             </div>
 
-            <div style={styles.statDescription}>
-              Scheduled appointments
+            <div style={styles.statLink}>
+              View appointments →
             </div>
-          </div>
+          </a>
 
-          <div style={styles.statCard}>
+          <a
+            href="/quotes"
+            style={styles.statCard}
+          >
             <div style={styles.statLabel}>
               Pipeline Value
             </div>
 
-            <div style={styles.statNumber}>
+            <div style={styles.statValue}>
               {loading
                 ? "—"
                 : `$${pipelineValue.toLocaleString()}`}
             </div>
 
-            <div style={styles.statDescription}>
-              Total quoted value
+            <div style={styles.statLink}>
+              View pipeline →
             </div>
-          </div>
+          </a>
 
         </div>
 
         {/* RECENT LEADS */}
 
-        <section style={styles.section}>
+        <section style={styles.card}>
 
-          <div style={styles.sectionHeader}>
+          <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.sectionTitle}>
+              <h2 style={styles.cardTitle}>
                 Recent Leads
               </h2>
 
-              <p style={styles.sectionSubtitle}>
-                {leads.length} customer
-                {leads.length === 1 ? "" : "s"}
+              <p style={styles.cardSubtitle}>
+                Your most recent customers.
               </p>
             </div>
 
-            <a href="/leads" style={styles.viewAll}>
+            <a
+              href="/leads"
+              style={styles.viewAll}
+            >
               View all →
             </a>
           </div>
 
           {loading ? (
-            <div style={styles.empty}>
+            <div style={styles.loading}>
               Loading leads...
             </div>
-          ) : leads.length === 0 ? (
+          ) : recentLeads.length === 0 ? (
             <div style={styles.empty}>
+              <div style={styles.emptyIcon}>
+                +
+              </div>
+
               <h3 style={styles.emptyTitle}>
                 No leads yet
               </h3>
 
               <p style={styles.emptyText}>
-                Customer requests will appear here
-                when they are submitted.
+                New customers will appear here
+                when they submit a quote request.
               </p>
+
+              <a
+                href="/leads"
+                style={styles.button}
+              >
+                Go to Leads
+              </a>
             </div>
           ) : (
-            <div style={styles.leadsList}>
-              {leads.slice(0, 5).map((lead) => (
+            <div>
+
+              {recentLeads.map((lead) => (
+
                 <a
                   key={lead.id}
                   href={`/leads/${lead.id}`}
                   style={styles.leadRow}
                 >
 
-                  <div style={styles.customerIcon}>
+                  <div style={styles.avatar}>
                     {lead.name
-                      ? lead.name.charAt(0).toUpperCase()
+                      ? lead.name
+                          .charAt(0)
+                          .toUpperCase()
                       : "?"}
                   </div>
 
                   <div style={styles.leadInfo}>
+
                     <div style={styles.leadName}>
                       {lead.name}
                     </div>
 
                     <div style={styles.leadService}>
-                      {lead.service || "HVAC Service"}
+                      {lead.service ||
+                        "Service not specified"}
                     </div>
+
                   </div>
 
-                  <div style={styles.leadProblem}>
-                    {lead.problem || "No description"}
+                  <div style={styles.problem}>
+                    {lead.problem
+                      ? lead.problem
+                      : "No problem description"}
                   </div>
 
                   <div>
-                    <span style={styles.status}>
+                    <span
+                      style={getStatusStyle(
+                        lead.status
+                      )}
+                    >
                       {lead.status || "New"}
                     </span>
                   </div>
 
-                  <div style={styles.leadArrow}>
+                  <div style={styles.contact}>
+                    {lead.phone ||
+                      lead.email ||
+                      "No contact"}
+                  </div>
+
+                  <div style={styles.arrow}>
                     →
                   </div>
 
                 </a>
+
               ))}
+
             </div>
           )}
+
+        </section>
+
+        {/* QUICK ACTIONS */}
+
+        <section style={styles.quickSection}>
+
+          <h2 style={styles.quickTitle}>
+            Quick Actions
+          </h2>
+
+          <div style={styles.quickGrid}>
+
+            <a
+              href="/leads"
+              style={styles.quickCard}
+            >
+              <div style={styles.quickIcon}>
+                +
+              </div>
+
+              <div>
+                <div style={styles.quickName}>
+                  View Leads
+                </div>
+
+                <div style={styles.quickDescription}>
+                  Manage your customers
+                </div>
+              </div>
+            </a>
+
+            <a
+              href="/quotes"
+              style={styles.quickCard}
+            >
+              <div style={styles.quickIcon}>
+                $
+              </div>
+
+              <div>
+                <div style={styles.quickName}>
+                  View Quotes
+                </div>
+
+                <div style={styles.quickDescription}>
+                  Manage customer pricing
+                </div>
+              </div>
+            </a>
+
+            <a
+              href="/appointments"
+              style={styles.quickCard}
+            >
+              <div style={styles.quickIcon}>
+                📅
+              </div>
+
+              <div>
+                <div style={styles.quickName}>
+                  Appointments
+                </div>
+
+                <div style={styles.quickDescription}>
+                  View scheduled jobs
+                </div>
+              </div>
+            </a>
+
+          </div>
 
         </section>
 
       </div>
     </main>
   );
+}
+
+function getStatusStyle(status: string | null) {
+  const normalized =
+    status?.toLowerCase();
+
+  if (normalized === "completed") {
+    return {
+      ...styles.status,
+      ...styles.completed,
+    };
+  }
+
+  if (normalized === "contacted") {
+    return {
+      ...styles.status,
+      ...styles.contacted,
+    };
+  }
+
+  if (normalized === "scheduled") {
+    return {
+      ...styles.status,
+      ...styles.scheduled,
+    };
+  }
+
+  if (normalized === "cancelled") {
+    return {
+      ...styles.status,
+      ...styles.cancelled,
+    };
+  }
+
+  return styles.status;
 }
 
 const styles = {
@@ -277,7 +465,7 @@ const styles = {
   container: {
     maxWidth: "1250px",
     margin: "0 auto",
-    padding: "0 30px 50px",
+    padding: "0 30px 60px",
   },
 
   nav: {
@@ -290,9 +478,10 @@ const styles = {
   },
 
   logo: {
+    color: "#111827",
+    textDecoration: "none",
     fontSize: "22px",
     fontWeight: 800,
-    color: "#111827",
   },
 
   navLinks: {
@@ -305,7 +494,6 @@ const styles = {
     color: "#6b7280",
     textDecoration: "none",
     fontSize: "14px",
-    fontWeight: 500,
   },
 
   activeLink: {
@@ -317,9 +505,9 @@ const styles = {
 
   header: {
     display: "flex",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: "30px",
+    alignItems: "center",
+    marginBottom: "25px",
   },
 
   title: {
@@ -329,18 +517,18 @@ const styles = {
   },
 
   subtitle: {
-    marginTop: "8px",
     color: "#6b7280",
+    marginTop: "8px",
     fontSize: "15px",
   },
 
-  newLeadButton: {
+  viewLeadsButton: {
     background: "#111827",
     color: "white",
     textDecoration: "none",
     padding: "11px 18px",
     borderRadius: "8px",
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: 600,
   },
 
@@ -349,7 +537,7 @@ const styles = {
     gridTemplateColumns:
       "repeat(4, minmax(0, 1fr))",
     gap: "18px",
-    marginBottom: "35px",
+    marginBottom: "25px",
   },
 
   statCard: {
@@ -357,78 +545,76 @@ const styles = {
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     padding: "22px",
+    textDecoration: "none",
+    color: "#111827",
   },
 
   statLabel: {
-    fontSize: "13px",
     color: "#6b7280",
+    fontSize: "13px",
     marginBottom: "10px",
   },
 
-  statNumber: {
-    fontSize: "30px",
+  statValue: {
+    fontSize: "28px",
     fontWeight: 700,
-    marginBottom: "7px",
+    marginBottom: "12px",
   },
 
-  statDescription: {
+  statLink: {
+    color: "#6b7280",
     fontSize: "12px",
-    color: "#9ca3af",
   },
 
-  section: {
+  card: {
     background: "white",
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     overflow: "hidden",
+    marginBottom: "30px",
   },
 
-  sectionHeader: {
-    padding: "22px 24px",
+  cardHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    padding: "22px 20px",
     borderBottom: "1px solid #e5e7eb",
   },
 
-  sectionTitle: {
+  cardTitle: {
     margin: 0,
     fontSize: "18px",
   },
 
-  sectionSubtitle: {
+  cardSubtitle: {
     margin: "5px 0 0",
-    color: "#9ca3af",
+    color: "#6b7280",
     fontSize: "13px",
   },
 
   viewAll: {
-    color: "#2563eb",
+    color: "#4f46e5",
     textDecoration: "none",
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: 600,
-  },
-
-  leadsList: {
-    display: "flex",
-    flexDirection: "column" as const,
   },
 
   leadRow: {
     display: "grid",
     gridTemplateColumns:
-      "44px 1.2fr 1.5fr 120px 30px",
+      "42px 1.5fr 2fr 1fr 1.4fr 25px",
+    gap: "15px",
     alignItems: "center",
-    gap: "18px",
-    padding: "18px 24px",
+    padding: "16px 20px",
     borderBottom: "1px solid #f0f0f0",
-    textDecoration: "none",
     color: "#111827",
+    textDecoration: "none",
   },
 
-  customerIcon: {
-    width: "42px",
-    height: "42px",
+  avatar: {
+    width: "38px",
+    height: "38px",
     borderRadius: "50%",
     background: "#eef2ff",
     color: "#4f46e5",
@@ -449,45 +635,155 @@ const styles = {
   },
 
   leadService: {
-    fontSize: "12px",
     color: "#6b7280",
+    fontSize: "12px",
   },
 
-  leadProblem: {
+  problem: {
+    color: "#4b5563",
     fontSize: "13px",
-    color: "#6b7280",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap" as const,
   },
 
+  contact: {
+    color: "#6b7280",
+    fontSize: "12px",
+  },
+
   status: {
     display: "inline-block",
-    background: "#dbeafe",
-    color: "#1d4ed8",
+    background: "#fef3c7",
+    color: "#92400e",
     padding: "6px 10px",
     borderRadius: "999px",
     fontSize: "11px",
-    fontWeight: 600,
+    fontWeight: 700,
   },
 
-  leadArrow: {
+  contacted: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+  },
+
+  completed: {
+    background: "#dcfce7",
+    color: "#166534",
+  },
+
+  scheduled: {
+    background: "#ede9fe",
+    color: "#6d28d9",
+  },
+
+  cancelled: {
+    background: "#fee2e2",
+    color: "#991b1b",
+  },
+
+  arrow: {
     color: "#9ca3af",
     fontSize: "18px",
   },
 
-  empty: {
-    padding: "60px 30px",
+  loading: {
+    padding: "50px",
     textAlign: "center" as const,
+    color: "#6b7280",
+  },
+
+  empty: {
+    textAlign: "center" as const,
+    padding: "65px 30px",
+  },
+
+  emptyIcon: {
+    width: "48px",
+    height: "48px",
+    margin: "0 auto 15px",
+    borderRadius: "50%",
+    background: "#eef2ff",
+    color: "#4f46e5",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "24px",
+    fontWeight: 700,
   },
 
   emptyTitle: {
     margin: 0,
-    fontSize: "18px",
+    fontSize: "19px",
   },
 
   emptyText: {
+    maxWidth: "450px",
+    margin: "10px auto 20px",
     color: "#6b7280",
     fontSize: "14px",
+    lineHeight: 1.6,
+  },
+
+  button: {
+    display: "inline-block",
+    background: "#111827",
+    color: "white",
+    textDecoration: "none",
+    padding: "11px 18px",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+  },
+
+  quickSection: {
+    marginTop: "10px",
+  },
+
+  quickTitle: {
+    fontSize: "18px",
+    marginBottom: "15px",
+  },
+
+  quickGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(3, minmax(0, 1fr))",
+    gap: "18px",
+  },
+
+  quickCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    background: "white",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "20px",
+    textDecoration: "none",
+    color: "#111827",
+  },
+
+  quickIcon: {
+    width: "42px",
+    height: "42px",
+    borderRadius: "10px",
+    background: "#f3f4f6",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "18px",
+    fontWeight: 700,
+  },
+
+  quickName: {
+    fontSize: "14px",
+    fontWeight: 700,
+    marginBottom: "4px",
+  },
+
+  quickDescription: {
+    color: "#6b7280",
+    fontSize: "12px",
   },
 };
