@@ -98,10 +98,17 @@ export default function Home() {
         }
 
         .nav-item {
+          display: block;
           padding: 12px 14px;
           border-radius: 8px;
           color: #6b7280;
           font-size: 14px;
+          text-decoration: none;
+        }
+
+        .nav-item:hover {
+          background: #f3f4f6;
+          color: #111827;
         }
 
         .nav-item.active {
@@ -278,78 +285,99 @@ export default function Home() {
       <div className="app">
 
         <aside className="sidebar">
+
           <div className="logo">
             QuoteFlow
           </div>
 
           <nav className="nav">
-            <div className="nav-item active">
+
+            <a href="/" className="nav-item active">
               Dashboard
-            </div>
+            </a>
 
-            <div className="nav-item">
+            <a href="/leads" className="nav-item">
               Leads
-            </div>
+            </a>
 
-            <div className="nav-item">
+            <a href="#" className="nav-item">
               Quotes
-            </div>
+            </a>
 
-            <div className="nav-item">
+            <a href="#" className="nav-item">
               Appointments
-            </div>
+            </a>
 
-            <div className="nav-item">
+            <a href="#" className="nav-item">
               Contractor CRM
-            </div>
+            </a>
+
           </nav>
+
         </aside>
 
         <main className="content">
 
           <div className="header">
-            <h1>Dashboard</h1>
+
+            <h1>
+              Dashboard
+            </h1>
+
             <p>
               Manage your leads, quotes, and jobs.
             </p>
+
           </div>
 
           <div className="stats">
 
             <div className="card">
+
               <div className="card-label">
                 New Leads
               </div>
+
               <div className="card-number">
                 {loading ? "..." : newLeads.length}
               </div>
+
             </div>
 
             <div className="card">
+
               <div className="card-label">
                 Quotes Awaiting
               </div>
+
               <div className="card-number">
                 0
               </div>
+
             </div>
 
             <div className="card">
+
               <div className="card-label">
                 Appointments
               </div>
+
               <div className="card-number">
                 {loading ? "..." : appointments.length}
               </div>
+
             </div>
 
             <div className="card">
+
               <div className="card-label">
                 Pipeline Value
               </div>
+
               <div className="card-number">
                 ${pipelineValue.toLocaleString()}
               </div>
+
             </div>
 
           </div>
@@ -357,12 +385,17 @@ export default function Home() {
           <section className="leads">
 
             <div className="leads-header">
-              <h2>Recent Leads</h2>
+
+              <h2>
+                Recent Leads
+              </h2>
+
               <p>
                 {loading
                   ? "Loading..."
                   : `${leads.length} customers`}
               </p>
+
             </div>
 
             {loading ? (
@@ -381,18 +414,24 @@ export default function Home() {
 
               leads.map((lead) => (
 
-                <div className="lead" key={lead.id}>
+                <div
+                  className="lead"
+                  key={lead.id}
+                >
 
                   <div className="lead-top">
 
                     <div>
+
                       <div className="lead-name">
                         {lead.name}
                       </div>
 
                       <div className="lead-service">
-                        {lead.service || "Service not specified"}
+                        {lead.service ||
+                          "Service not specified"}
                       </div>
+
                     </div>
 
                     <div className="lead-right">
@@ -420,7 +459,9 @@ export default function Home() {
 
                   {lead.problem && (
                     <div className="problem">
-                      <strong>Problem:</strong>{" "}
+                      <strong>
+                        Problem:
+                      </strong>{" "}
                       {lead.problem}
                     </div>
                   )}
