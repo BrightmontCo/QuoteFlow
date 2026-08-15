@@ -11,8 +11,6 @@ type Lead = {
   service?: string | null;
   problem?: string | null;
   status?: string | null;
-  "appointment date"?: string | null;
-  "quote amount"?: number | null;
 };
 
 export default function LeadsPage() {
@@ -84,7 +82,6 @@ export default function LeadsPage() {
         </div>
 
         <section style={styles.card}>
-
           {loading ? (
             <div style={styles.message}>
               Loading leads...
@@ -103,11 +100,10 @@ export default function LeadsPage() {
             </div>
           ) : (
             <div>
-
               {leads.map((lead) => (
                 <a
                   key={lead.id}
-                  href={`/leads/${lead.id}`}
+                  href={"/leads/" + lead.id}
                   style={styles.lead}
                 >
                   <div style={styles.avatar}>
@@ -145,10 +141,8 @@ export default function LeadsPage() {
                   </div>
                 </a>
               ))}
-
             </div>
           )}
-
         </section>
 
       </div>
