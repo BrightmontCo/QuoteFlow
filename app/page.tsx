@@ -20,7 +20,6 @@ type Lead = {
 export default function Home() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadLeads() {
@@ -31,17 +30,11 @@ export default function Home() {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-          throw new Error(result.error || "Unable to load leads");
+        if (result.success) {
+          setLeads(result.data || []);
         }
-
-        setLeads(result.data || []);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load leads"
-        );
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -52,11 +45,6 @@ export default function Home() {
 
   const newLeads = leads.filter(
     (lead) => (lead.status || "").toLowerCase() === "new"
-  );
-
-  const quotesAwaiting = leads.filter(
-    (lead) =>
-      (lead.status || "").toLowerCase() === "quote"
   );
 
   const appointments = leads.filter(
@@ -70,217 +58,384 @@ export default function Home() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-100 text-gray-900">
+    <>
+      <style>{`
+        * {
+          box-sizing: border-box;
+        }
 
-      <div className="flex min-h-screen">
+        body {
+          margin: 0;
+          font-family: Arial, Helvetica, sans-serif;
+          background: #f5f7fa;
+          color: #111827;
+        }
 
-        {/* SIDEBAR */}
-        <aside className="w-64 bg-white border-r p-6">
+        .app {
+          display: flex;
+          min-height: 100vh;
+        }
 
-          <h1 className="text-2xl font-bold mb-10">
+        .sidebar {
+          width: 240px;
+          min-height: 100vh;
+          background: white;
+          border-right: 1px solid #e5e7eb;
+          padding: 28px 20px;
+          flex-shrink: 0;
+        }
+
+        .logo {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 40px;
+        }
+
+        .nav {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .nav-item {
+          padding: 12px 14px;
+          border-radius: 8px;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .nav-item.active {
+          background: #111827;
+          color: white;
+          font-weight: 600;
+        }
+
+        .content {
+          flex: 1;
+          padding: 40px;
+          min-width: 0;
+        }
+
+        .header {
+          margin-bottom: 30px;
+        }
+
+        .header h1 {
+          margin: 0;
+          font-size: 30px;
+        }
+
+        .header p {
+          margin-top: 8px;
+          color: #6b7280;
+        }
+
+        .stats {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+          margin-bottom: 30px;
+        }
+
+        .card {
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 24px;
+        }
+
+        .card-label {
+          color: #6b7280;
+          font-size: 14px;
+          margin-bottom: 12px;
+        }
+
+        .card-number {
+          font-size: 30px;
+          font-weight: 700;
+        }
+
+        .leads {
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .leads-header {
+          padding: 24px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .leads-header h2 {
+          margin: 0;
+          font-size: 20px;
+        }
+
+        .leads-header p {
+          margin: 6px 0 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .lead {
+          padding: 24px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .lead:last-child {
+          border-bottom: none;
+        }
+
+        .lead-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .lead-name {
+          font-size: 17px;
+          font-weight: 600;
+          margin-bottom: 5px;
+        }
+
+        .lead-service {
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .lead-right {
+          text-align: right;
+        }
+
+        .status {
+          display: inline-block;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: #dbeafe;
+          color: #1d4ed8;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .lead-phone {
+          margin-top: 8px;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .appointment {
+          margin-top: 4px;
+          color: #6b7280;
+          font-size: 13px;
+        }
+
+        .problem {
+          margin-top: 14px;
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 8px;
+          color: #4b5563;
+          font-size: 14px;
+        }
+
+        .empty {
+          padding: 40px 24px;
+          color: #6b7280;
+        }
+
+        @media (max-width: 1000px) {
+          .stats {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 700px) {
+          .sidebar {
+            width: 180px;
+          }
+
+          .content {
+            padding: 24px;
+          }
+
+          .stats {
+            grid-template-columns: 1fr;
+          }
+
+          .lead-top {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .lead-right {
+            text-align: left;
+          }
+        }
+      `}</style>
+
+      <div className="app">
+
+        <aside className="sidebar">
+          <div className="logo">
             QuoteFlow
-          </h1>
+          </div>
 
-          <nav className="space-y-3">
-
-            <div className="rounded-lg bg-black text-white px-4 py-3">
+          <nav className="nav">
+            <div className="nav-item active">
               Dashboard
             </div>
 
-            <div className="px-4 py-3 text-gray-600">
+            <div className="nav-item">
               Leads
             </div>
 
-            <div className="px-4 py-3 text-gray-600">
+            <div className="nav-item">
               Quotes
             </div>
 
-            <div className="px-4 py-3 text-gray-600">
+            <div className="nav-item">
               Appointments
             </div>
 
-            <div className="px-4 py-3 text-gray-600">
+            <div className="nav-item">
               Contractor CRM
             </div>
-
           </nav>
-
         </aside>
 
-        {/* CONTENT */}
-        <section className="flex-1 p-8">
+        <main className="content">
 
-          <div className="mb-8">
-
-            <h2 className="text-3xl font-bold">
-              Dashboard
-            </h2>
-
-            <p className="text-gray-500 mt-1">
+          <div className="header">
+            <h1>Dashboard</h1>
+            <p>
               Manage your leads, quotes, and jobs.
             </p>
-
           </div>
 
-          {error && (
-            <div className="mb-6 rounded-lg bg-red-100 p-4 text-red-700">
-              {error}
-            </div>
-          )}
+          <div className="stats">
 
-          {/* STATISTICS */}
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-
-              <p className="text-gray-500 text-sm">
+            <div className="card">
+              <div className="card-label">
                 New Leads
-              </p>
-
-              <p className="text-3xl font-bold mt-2">
+              </div>
+              <div className="card-number">
                 {loading ? "..." : newLeads.length}
-              </p>
-
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-
-              <p className="text-gray-500 text-sm">
+            <div className="card">
+              <div className="card-label">
                 Quotes Awaiting
-              </p>
-
-              <p className="text-3xl font-bold mt-2">
-                {loading ? "..." : quotesAwaiting.length}
-              </p>
-
+              </div>
+              <div className="card-number">
+                0
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-
-              <p className="text-gray-500 text-sm">
+            <div className="card">
+              <div className="card-label">
                 Appointments
-              </p>
-
-              <p className="text-3xl font-bold mt-2">
+              </div>
+              <div className="card-number">
                 {loading ? "..." : appointments.length}
-              </p>
-
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-
-              <p className="text-gray-500 text-sm">
+            <div className="card">
+              <div className="card-label">
                 Pipeline Value
-              </p>
-
-              <p className="text-3xl font-bold mt-2">
+              </div>
+              <div className="card-number">
                 ${pipelineValue.toLocaleString()}
-              </p>
-
+              </div>
             </div>
 
           </div>
 
-          {/* RECENT LEADS */}
+          <section className="leads">
 
-          <div className="bg-white rounded-xl shadow-sm">
-
-            <div className="p-6 border-b">
-
-              <h3 className="text-xl font-bold">
-                Recent Leads
-              </h3>
-
-              <p className="text-gray-500 text-sm mt-1">
+            <div className="leads-header">
+              <h2>Recent Leads</h2>
+              <p>
                 {loading
                   ? "Loading..."
                   : `${leads.length} customers`}
               </p>
-
             </div>
 
             {loading ? (
 
-              <div className="p-8 text-gray-500">
+              <div className="empty">
                 Loading leads...
               </div>
 
             ) : leads.length === 0 ? (
 
-              <div className="p-8 text-gray-500">
+              <div className="empty">
                 No leads yet.
               </div>
 
             ) : (
 
-              <div className="divide-y">
+              leads.map((lead) => (
 
-                {leads.map((lead) => (
+                <div className="lead" key={lead.id}>
 
-                  <div
-                    key={lead.id}
-                    className="p-6 hover:bg-gray-50"
-                  >
+                  <div className="lead-top">
 
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
-                      <div>
-
-                        <h4 className="font-semibold text-lg">
-                          {lead.name}
-                        </h4>
-
-                        <p className="text-gray-500 text-sm mt-1">
-                          {lead.service ||
-                            "Service not specified"}
-                        </p>
-
-                        {lead.problem && (
-                          <p className="text-gray-600 text-sm mt-2">
-                            {lead.problem}
-                          </p>
-                        )}
-
+                    <div>
+                      <div className="lead-name">
+                        {lead.name}
                       </div>
 
-                      <div className="text-left md:text-right">
-
-                        <span className="inline-block rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm">
-                          {lead.status || "New"}
-                        </span>
-
-                        {lead.phone && (
-                          <p className="text-sm text-gray-500 mt-2">
-                            {lead.phone}
-                          </p>
-                        )}
-
-                        {lead["appointment date"] && (
-                          <p className="text-sm text-gray-500">
-                            Appointment:{" "}
-                            {lead["appointment date"]}
-                          </p>
-                        )}
-
+                      <div className="lead-service">
+                        {lead.service || "Service not specified"}
                       </div>
+                    </div>
+
+                    <div className="lead-right">
+
+                      <span className="status">
+                        {lead.status || "New"}
+                      </span>
+
+                      {lead.phone && (
+                        <div className="lead-phone">
+                          {lead.phone}
+                        </div>
+                      )}
+
+                      {lead["appointment date"] && (
+                        <div className="appointment">
+                          Appointment:{" "}
+                          {lead["appointment date"]}
+                        </div>
+                      )}
 
                     </div>
 
                   </div>
 
-                ))}
+                  {lead.problem && (
+                    <div className="problem">
+                      <strong>Problem:</strong>{" "}
+                      {lead.problem}
+                    </div>
+                  )}
 
-              </div>
+                </div>
+
+              ))
 
             )}
 
-          </div>
+          </section>
 
-        </section>
+        </main>
 
       </div>
-
-    </main>
+    </>
   );
 }
