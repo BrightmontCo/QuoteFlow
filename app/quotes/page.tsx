@@ -18,25 +18,24 @@ export default function QuotesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function loadCustomers() {
+  const loadCustomers = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch("/api/leads", {
-        method: "GET",
-        cache: "no-store",
-      });
+      const response = await fetch("/api/leads");
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Could not load customers");
+        throw new Error(data.error || "Could not load customers");
       }
 
-      const leads = Array.isArray(data) ? data : data.leads || data.customers || [];
+      const list = Array.isArray(data)
+        ? data
+        : data.leads || data.customers || [];
 
-      setCustomers(leads);
+      setCustomers(list);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not load customers"
@@ -44,37 +43,48 @@ export default function QuotesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function updateStatus(id: string, status: string) {
+  const updateStatus = async (customerId: string, newStatus: string) => {
     try {
       setError("");
 
-      const response = await fetch(`/api/leads/${id}`, {
+      const url = "/api/leads/" + customerId;
+
+      const response = await fetch(url, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status: newStatus,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Could not update customer");
+        throw new Error(data.error || "Could not update customer");
       }
 
-      setCustomers((current) =>
-        current.map((customer) =>
-          customer.id === id ? { ...customer, status } : customer
-        )
+      setCustomers((oldCustomers) =>
+        oldCustomers.map((customer) => {
+          if (customer.id === customerId) {
+            return {
+              ...customer,
+              status: newStatus,
+            };
+          }
+
+          return customer;
+        })
       );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not update customer"
       );
     }
-  }
+  };
 
   useEffect(() => {
     loadCustomers();
@@ -131,7 +141,7 @@ export default function QuotesPage() {
               borderRadius: "8px",
               padding: "10px 16px",
               background: "#111827",
-              color: "white",
+              color: "#ffffff",
               cursor: "pointer",
               fontWeight: 600,
             }}
@@ -140,7 +150,7 @@ export default function QuotesPage() {
           </button>
         </div>
 
-        {error && (
+        {error !== "" && (
           <div
             style={{
               background: "#fee2e2",
@@ -154,11 +164,11 @@ export default function QuotesPage() {
           </div>
         )}
 
-        {loading ? (
+        {loading && (
           <div
             style={{
-              background: "white",
-              padding: "30px",
+              background: "#ffffff",
+              padding: "40px",
               borderRadius: "12px",
               textAlign: "center",
               color: "#6b7280",
@@ -166,22 +176,36 @@ export default function QuotesPage() {
           >
             Loading customers...
           </div>
-        ) : customers.length === 0 ? (
+        )}
+
+        {!loading && customers.length === 0 && error === "" && (
           <div
             style={{
-              background: "white",
+              background: "#ffffff",
               padding: "50px 30px",
               borderRadius: "12px",
               textAlign: "center",
             }}
           >
-            <h2 style={{ color: "#111827" }}>No customers yet</h2>
+            <h2
+              style={{
+                color: "#111827",
+              }}
+            >
+              No customers yet
+            </h2>
 
-            <p style={{ color: "#6b7280" }}>
+            <p
+              style={{
+                color: "#6b7280",
+              }}
+            >
               Customers will appear here when they submit a quote request.
             </p>
           </div>
-        ) : (
+        )}
+
+        {!loading && customers.length > 0 && (
           <div
             style={{
               display: "grid",
@@ -192,7 +216,7 @@ export default function QuotesPage() {
               <div
                 key={customer.id}
                 style={{
-                  background: "white",
+                  background: "#ffffff",
                   borderRadius: "12px",
                   padding: "22px",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
@@ -220,19 +244,34 @@ export default function QuotesPage() {
                     </h2>
 
                     {customer.email && (
-                      <p style={{ margin: "5px 0", color: "#4b5563" }}>
+                      <p
+                        style={{
+                          margin: "5px 0",
+                          color: "#4b5563",
+                        }}
+                      >
                         Email: {customer.email}
                       </p>
                     )}
 
                     {customer.phone && (
-                      <p style={{ margin: "5px 0", color: "#4b5563" }}>
+                      <p
+                        style={{
+                          margin: "5px 0",
+                          color: "#4b5563",
+                        }}
+                      >
                         Phone: {customer.phone}
                       </p>
                     )}
 
                     {customer.service && (
-                      <p style={{ margin: "5px 0", color: "#4b5563" }}>
+                      <p
+                        style={{
+                          margin: "5px 0",
+                          color: "#4b5563",
+                        }}
+                      >
                         Service: {customer.service}
                       </p>
                     )}
@@ -247,7 +286,7 @@ export default function QuotesPage() {
                       padding: "9px 12px",
                       borderRadius: "8px",
                       border: "1px solid #d1d5db",
-                      background: "white",
+                      background: "#ffffff",
                       color: "#111827",
                     }}
                   >
