@@ -5,49 +5,53 @@ import { useEffect, useState } from "react";
 type Lead = {
   id: string;
   name: string;
-  phone: string;
-  email: string;
-  address: string;
-  service: string;
-  problem: string;
-  status: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  service: string | null;
+  problem: string | null;
+  status: string | null;
   quote_amount: number | null;
   appointment_date: string | null;
   notes: string | null;
-  created_at: string;
+  created_at: string | null;
 };
 
 export default function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function getLeads() {
+    async function loadLeads() {
       try {
-        const response = await fetch("/api/leads");
+        const response = await fetch("/api/leads", {
+          cache: "no-store",
+        });
 
-        if (!response.ok) {
-          throw new Error("Failed to load leads");
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error("Could not load leads");
         }
 
-        const data = await response.json();
-
-        setLeads(data);
-      } catch (error) {
-        console.error(error);
+        setLeads(result.data || []);
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load leads.");
       } finally {
         setLoading(false);
       }
     }
 
-    getLeads();
+    loadLeads();
   }, []);
 
   const newLeads = leads.filter(
     (lead) => lead.status?.toLowerCase() === "new"
   );
 
-  const quotes = leads.filter(
+  const quotesAwaiting = leads.filter(
     (lead) => lead.status?.toLowerCase() === "quote sent"
   );
 
@@ -55,101 +59,162 @@ export default function Dashboard() {
     (lead) => lead.status?.toLowerCase() === "booked"
   );
 
-  const pipeline = leads.reduce(
-    (total, lead) => total + (Number(lead.quote_amount) || 0),
+  const pipelineValue = leads.reduce(
+    (total, lead) => total + Number(lead.quote_amount || 0),
     0
   );
 
   return (
-    <main style={styles.page}>
-      <aside style={styles.sidebar}>
-        <div style={styles.logo}>QuoteFlow</div>
+    <main className="min-h-screen bg-gray-50 text-gray-900">
+      <div className="flex min-h-screen">
+        {/* SIDEBAR */}
+        <aside className="hidden w-60 border-r bg-white p-6 md:block">
+          <div className="mb-10 text-2xl font-bold">QuoteFlow</div>
 
-        <nav>
-          <div style={styles.activeNav}>Dashboard</div>
-          <div style={styles.navItem}>Leads</div>
-          <div style={styles.navItem}>Quotes</div>
-          <div style={styles.navItem}>Appointments</div>
-        </nav>
-      </aside>
+          <nav className="space-y-2">
+            <div className="rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold">
+              Dashboard
+            </div>
 
-      <section style={styles.content}>
-        <header style={styles.header}>
-          <div>
-            <p style={styles.smallText}>Contractor CRM</p>
-            <h1 style={styles.title}>Dashboard</h1>
-            <p style={styles.subtitle}>
+            <div className="px-4 py-3 text-sm text-gray-500">Leads</div>
+
+            <div className="px-4 py-3 text-sm text-gray-500">Quotes</div>
+
+            <div className="px-4 py-3 text-sm text-gray-500">
+              Appointments
+            </div>
+          </nav>
+        </aside>
+
+        {/* MAIN */}
+        <section className="flex-1 p-6 md:p-10">
+          {/* HEADER */}
+          <header className="mb-8">
+            <p className="text-sm text-gray-500">Contractor CRM</p>
+
+            <h1 className="mt-1 text-3xl font-bold">Dashboard</h1>
+
+            <p className="mt-1 text-gray-500">
               Manage your leads, quotes, and jobs.
             </p>
-          </div>
+          </header>
 
-          <div style={styles.account}>
-            <div style={styles.avatar}>QF</div>
-            QuoteFlow
-          </div>
-        </header>
+          {/* STATS */}
+          <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="New Leads"
+              value={newLeads.length.toString()}
+            />
 
-        <section style={styles.stats}>
-          <Stat title="New Leads" value={String(newLeads.length)} />
-          <Stat title="Quotes Awaiting" value={String(quotes.length)} />
-          <Stat title="Appointments" value={String(booked.length)} />
-          <Stat
-            title="Pipeline Value"
-            value={`$${pipeline.toLocaleString()}`}
-          />
-        </section>
+            <StatCard
+              title="Quotes Awaiting"
+              value={quotesAwaiting.length.toString()}
+            />
 
-        <section style={styles.panel}>
-          <div style={styles.panelHeader}>
-            <h2 style={styles.panelTitle}>Recent Leads</h2>
+            <StatCard
+              title="Appointments"
+              value={booked.length.toString()}
+            />
 
-            <span style={styles.muted}>
-              {loading ? "Loading..." : `${leads.length} customers`}
-            </span>
-          </div>
+            <StatCard
+              title="Pipeline Value"
+              value={`$${pipelineValue.toLocaleString()}`}
+            />
+          </section>
 
-          {loading ? (
-            <div style={styles.message}>Loading leads...</div>
-          ) : leads.length === 0 ? (
-            <div style={styles.message}>
-              No leads yet. Submit your Tally quote form to create one.
-            </div>
-          ) : (
-            <div>
-              <div style={styles.tableHeader}>
-                <span>Customer</span>
-                <span>Service</span>
-                <span>Status</span>
-                <span>Quote</span>
+          {/* LEADS */}
+          <section className="overflow-hidden rounded-xl border bg-white">
+            <div className="flex items-center justify-between border-b p-5">
+              <div>
+                <h2 className="font-semibold">Recent Leads</h2>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  {leads.length} customer{leads.length === 1 ? "" : "s"}
+                </p>
               </div>
-
-              {leads.map((lead) => (
-                <div style={styles.tableRow} key={lead.id}>
-                  <div>
-                    <strong>{lead.name}</strong>
-                    <div style={styles.email}>{lead.email}</div>
-                  </div>
-
-                  <span>{lead.service}</span>
-
-                  <span style={styles.status}>{lead.status}</span>
-
-                  <span>
-                    {lead.quote_amount
-                      ? `$${Number(lead.quote_amount).toLocaleString()}`
-                      : "—"}
-                  </span>
-                </div>
-              ))}
             </div>
-          )}
+
+            {loading && (
+              <div className="p-10 text-center text-gray-500">
+                Loading leads...
+              </div>
+            )}
+
+            {!loading && error && (
+              <div className="p-10 text-center text-red-500">
+                {error}
+              </div>
+            )}
+
+            {!loading && !error && leads.length === 0 && (
+              <div className="p-10 text-center text-gray-500">
+                No leads yet.
+              </div>
+            )}
+
+            {!loading && !error && leads.length > 0 && (
+              <div>
+                {/* TABLE HEADER */}
+                <div className="hidden grid-cols-4 gap-4 border-b bg-gray-50 px-5 py-3 text-xs font-medium text-gray-500 md:grid">
+                  <div>Customer</div>
+                  <div>Service</div>
+                  <div>Status</div>
+                  <div>Quote</div>
+                </div>
+
+                {/* LEADS */}
+                {leads.map((lead) => (
+                  <div
+                    key={lead.id}
+                    className="grid gap-3 border-b px-5 py-5 md:grid-cols-4 md:items-center"
+                  >
+                    {/* CUSTOMER */}
+                    <div>
+                      <div className="font-semibold">
+                        {lead.name || "Unknown Customer"}
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        {lead.email || "No email"}
+                      </div>
+
+                      {lead.phone && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          {lead.phone}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SERVICE */}
+                    <div className="text-sm">
+                      {lead.service || "—"}
+                    </div>
+
+                    {/* STATUS */}
+                    <div>
+                      <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
+                        {lead.status || "New"}
+                      </span>
+                    </div>
+
+                    {/* QUOTE */}
+                    <div className="text-sm font-semibold">
+                      {lead.quote_amount
+                        ? `$${Number(lead.quote_amount).toLocaleString()}`
+                        : "—"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </section>
-      </section>
+      </div>
     </main>
   );
 }
 
-function Stat({
+function StatCard({
   title,
   value,
 }: {
@@ -157,190 +222,10 @@ function Stat({
   value: string;
 }) {
   return (
-    <div style={styles.stat}>
-      <p style={styles.statTitle}>{title}</p>
-      <h2 style={styles.statValue}>{value}</h2>
+    <div className="rounded-xl border bg-white p-5">
+      <p className="text-sm text-gray-500">{title}</p>
+
+      <p className="mt-2 text-3xl font-bold">{value}</p>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#f6f8fb",
-    color: "#172033",
-    fontFamily: "Arial, sans-serif",
-    display: "flex",
-  },
-
-  sidebar: {
-    width: "240px",
-    background: "#ffffff",
-    borderRight: "1px solid #e5e7eb",
-    padding: "28px 16px",
-  },
-
-  logo: {
-    fontSize: "23px",
-    fontWeight: 800,
-    marginBottom: "35px",
-    paddingLeft: "10px",
-  },
-
-  navItem: {
-    padding: "12px",
-    marginBottom: "6px",
-    color: "#667085",
-    fontSize: "14px",
-  },
-
-  activeNav: {
-    padding: "12px",
-    marginBottom: "6px",
-    background: "#eef1f5",
-    borderRadius: "8px",
-    fontWeight: 700,
-    fontSize: "14px",
-  },
-
-  content: {
-    flex: 1,
-    padding: "35px",
-    maxWidth: "1400px",
-  },
-
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "30px",
-  },
-
-  smallText: {
-    color: "#667085",
-    fontSize: "13px",
-    margin: 0,
-  },
-
-  title: {
-    fontSize: "30px",
-    margin: "5px 0",
-  },
-
-  subtitle: {
-    color: "#667085",
-    margin: 0,
-  },
-
-  account: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    padding: "8px 12px",
-    borderRadius: "10px",
-    display: "flex",
-    gap: "10px",
-    alignItems: "center",
-    fontSize: "13px",
-    fontWeight: 600,
-  },
-
-  avatar: {
-    width: "34px",
-    height: "34px",
-    borderRadius: "50%",
-    background: "#172033",
-    color: "#ffffff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "11px",
-  },
-
-  stats: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "16px",
-    marginBottom: "22px",
-  },
-
-  stat: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    padding: "20px",
-  },
-
-  statTitle: {
-    color: "#667085",
-    fontSize: "13px",
-    margin: 0,
-  },
-
-  statValue: {
-    fontSize: "28px",
-    margin: "10px 0 0",
-  },
-
-  panel: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    overflow: "hidden",
-  },
-
-  panelHeader: {
-    padding: "18px 20px",
-    borderBottom: "1px solid #e5e7eb",
-    display: "flex",
-    justifyContent: "space-between",
-  },
-
-  panelTitle: {
-    fontSize: "16px",
-    margin: 0,
-  },
-
-  muted: {
-    color: "#667085",
-    fontSize: "12px",
-  },
-
-  tableHeader: {
-    display: "grid",
-    gridTemplateColumns: "2fr 2fr 1fr 1fr",
-    padding: "13px 20px",
-    color: "#667085",
-    fontSize: "12px",
-    borderBottom: "1px solid #eef0f4",
-  },
-
-  tableRow: {
-    display: "grid",
-    gridTemplateColumns: "2fr 2fr 1fr 1fr",
-    padding: "16px 20px",
-    borderBottom: "1px solid #eef0f4",
-    fontSize: "14px",
-    alignItems: "center",
-  },
-
-  status: {
-    background: "#eef1f5",
-    borderRadius: "20px",
-    padding: "5px 9px",
-    fontSize: "11px",
-    fontWeight: 700,
-    width: "fit-content",
-  },
-
-  email: {
-    color: "#667085",
-    fontSize: "12px",
-    marginTop: "4px",
-  },
-
-  message: {
-    padding: "50px",
-    textAlign: "center",
-    color: "#667085",
-  },
-};
