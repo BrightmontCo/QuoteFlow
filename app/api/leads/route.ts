@@ -7,22 +7,25 @@ export async function GET(request: Request) {
   try {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return NextResponse.json(
-        { success: false, error: "Supabase variables are missing" },
+        {
+          success: false,
+          error: "Supabase environment variables are missing.",
+        },
         { status: 500 }
       );
     }
 
-    const url = new URL(request.url);
-    const id = url.searchParams.get("id");
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
 
-    let supabaseUrl =
-      `${SUPABASE_URL}/rest/v1/leads?select=*`;
+    let url = `${SUPABASE_URL}/rest/v1/leads?select=*`;
 
     if (id) {
-      supabaseUrl += `&id=eq.${encodeURIComponent(id)}`;
+      url += `&id=eq.${encodeURIComponent(id)}`;
     }
 
-    const response = await fetch(supabaseUrl, {
+    const response = await fetch(url, {
+      method: "GET",
       headers: {
         apikey: SUPABASE_KEY,
         Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -32,10 +35,19 @@ export async function GET(request: Request) {
 
     const data = await response.json();
 
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: data?.message || "Unable to load leads.",
+        },
+        { status: response.status }
+      );
+    }
+
     return NextResponse.json({
-      success: response.ok,
-      data: response.ok ? data : [],
-      error: response.ok ? null : data?.message,
+      success: true,
+      data,
     });
   } catch (error) {
     return NextResponse.json(
@@ -52,7 +64,10 @@ export async function PATCH(request: Request) {
   try {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return NextResponse.json(
-        { success: false, error: "Supabase variables are missing" },
+        {
+          success: false,
+          error: "Supabase environment variables are missing.",
+        },
         { status: 500 }
       );
     }
@@ -61,46 +76,83 @@ export async function PATCH(request: Request) {
 
     if (!body.id) {
       return NextResponse.json(
-        { success: false, error: "Customer ID is missing" },
+        {
+          success: false,
+          error: "Customer ID is missing.",
+        },
         { status: 400 }
       );
     }
 
-    const update = {
-      status: body.status || "New",
-      "quote amount":
+    const updateData: Record<string, unknown> = {};
+
+    if (body.status !== undefined) {
+      updateData.status = body.status;
+    }
+
+    if (body.quoteAmount !== undefined) {
+      updateData["quote amount"] =
         body.quoteAmount === ""
           ? null
-          : body.quoteAmount == null
+          : Number(body.quoteAmount);
+    }
+
+    if (body.appointmentDate !== undefined) {
+      updateData["appointment date"] =
+        body.appointmentDate === ""
           ? null
-          : Number(body.quoteAmount),
-      "appointment date":
-        body.appointmentDate || null,
-      notes: body.notes || null,
-    };
+          : body.appointmentDate;
+    }
 
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?id=eq.${encodeURIComponent(
-        body.id
-      )}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
+    if (body.notes !== undefined) {
+      updateData.notes =
+        body.notes === ""
+          ? null
+          : body.notes;
+    }
+
+    const url =
+      `${SUPABASE_URL}/rest/v1/leads` +
+      `?id=eq.${encodeURIComponent(body.id)}`;
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    const responseText = await response.text();
+
+    let data;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = responseText;
+    }
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            data?.message ||
+            data?.error ||
+            "Supabase could not update the customer.",
+          supabaseResponse: data,
         },
-        body: JSON.stringify(update),
-      }
-    );
-
-    const data = await response.json();
+        { status: response.status }
+      );
+    }
 
     return NextResponse.json({
-      success: response.ok,
+      success: true,
       data,
-      error: response.ok ? null : data?.message,
     });
   } catch (error) {
     return NextResponse.json(
