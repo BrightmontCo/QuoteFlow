@@ -14,408 +14,245 @@ type Lead = {
   "quote amount": number | null;
   "appointment date": string | null;
   notes: string | null;
-  "created At": string | null;
 };
 
-export default function Home() {
+export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/leads", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((result) => {
-        if (result.success) {
-          setLeads(result.data || []);
+    async function load() {
+      try {
+        const response = await fetch("/api/leads", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          setError(result.error || "Unable to load leads.");
+          return;
         }
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+
+        setLeads(result.data || []);
+      } catch {
+        setError("Unable to load leads.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
   }, []);
 
-  const newLeads = leads.filter(
-    (lead) => (lead.status || "").toLowerCase() === "new"
-  );
-
-  const appointments = leads.filter(
-    (lead) => lead["appointment date"]
-  );
-
-  const pipelineValue = leads.reduce(
-    (total, lead) => total + Number(lead["quote amount"] || 0),
-    0
-  );
-
   return (
-    <>
-      <style>{`
-        * { box-sizing: border-box; }
+    <main style={styles.page}>
+      <div style={styles.container}>
 
-        body {
-          margin: 0;
-          font-family: Arial, sans-serif;
-          background: #f5f7fa;
-          color: #111827;
-        }
-
-        .app {
-          display: flex;
-          min-height: 100vh;
-        }
-
-        .sidebar {
-          width: 240px;
-          min-height: 100vh;
-          background: white;
-          border-right: 1px solid #e5e7eb;
-          padding: 28px 20px;
-          flex-shrink: 0;
-        }
-
-        .logo {
-          font-size: 24px;
-          font-weight: 700;
-          margin-bottom: 40px;
-        }
-
-        .nav {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .nav a {
-          display: block;
-          padding: 12px 14px;
-          border-radius: 8px;
-          color: #6b7280;
-          text-decoration: none;
-          font-size: 14px;
-        }
-
-        .nav a:hover {
-          background: #f3f4f6;
-          color: #111827;
-        }
-
-        .nav a.active {
-          background: #111827;
-          color: white;
-          font-weight: 600;
-        }
-
-        .content {
-          flex: 1;
-          padding: 40px;
-        }
-
-        .header {
-          margin-bottom: 30px;
-        }
-
-        .header h1 {
-          margin: 0;
-          font-size: 30px;
-        }
-
-        .header p {
-          color: #6b7280;
-          margin-top: 8px;
-        }
-
-        .stats {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
-          margin-bottom: 30px;
-        }
-
-        .card {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 24px;
-        }
-
-        .label {
-          color: #6b7280;
-          font-size: 14px;
-          margin-bottom: 12px;
-        }
-
-        .number {
-          font-size: 30px;
-          font-weight: 700;
-        }
-
-        .leads {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          overflow: hidden;
-        }
-
-        .leads-header {
-          padding: 24px;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .leads-header h2 {
-          margin: 0;
-        }
-
-        .leads-header p {
-          color: #6b7280;
-          margin-bottom: 0;
-        }
-
-        .lead {
-          padding: 24px;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .lead:last-child {
-          border-bottom: none;
-        }
-
-        .lead-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .lead-name {
-          font-weight: 600;
-          font-size: 17px;
-        }
-
-        .lead-service {
-          color: #6b7280;
-          margin-top: 5px;
-        }
-
-        .right {
-          text-align: right;
-        }
-
-        .status {
-          background: #dbeafe;
-          color: #1d4ed8;
-          padding: 6px 10px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .phone {
-          color: #6b7280;
-          margin-top: 8px;
-          font-size: 14px;
-        }
-
-        .appointment {
-          color: #6b7280;
-          font-size: 13px;
-          margin-top: 4px;
-        }
-
-        .problem {
-          margin-top: 14px;
-          padding: 12px;
-          background: #f9fafb;
-          border-radius: 8px;
-          color: #4b5563;
-        }
-
-        .empty {
-          padding: 40px 24px;
-          color: #6b7280;
-        }
-
-        @media (max-width: 1000px) {
-          .stats {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 700px) {
-          .sidebar {
-            width: 180px;
-          }
-
-          .content {
-            padding: 24px;
-          }
-
-          .stats {
-            grid-template-columns: 1fr;
-          }
-
-          .lead-top {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 15px;
-          }
-
-          .right {
-            text-align: left;
-          }
-        }
-      `}</style>
-
-      <div className="app">
-
-        <aside className="sidebar">
-
-          <div className="logo">
-            QuoteFlow
+        <div style={styles.header}>
+          <div>
+            <h1 style={styles.title}>Leads</h1>
+            <p style={styles.subtitle}>
+              Manage your customers and service requests.
+            </p>
           </div>
 
-          <nav className="nav">
+          <a href="/" style={styles.button}>
+            Dashboard
+          </a>
+        </div>
 
-            <a href="/" className="active">
-              Dashboard
-            </a>
-
-            <a href="/leads">
-              Leads
-            </a>
-
-            <a href="#">
-              Quotes
-            </a>
-
-            <a href="#">
-              Appointments
-            </a>
-
-            <a href="#">
-              Contractor CRM
-            </a>
-
-          </nav>
-
-        </aside>
-
-        <main className="content">
-
-          <div className="header">
-            <h1>Dashboard</h1>
-            <p>Manage your leads, quotes, and jobs.</p>
+        {loading && (
+          <div style={styles.card}>
+            Loading leads...
           </div>
+        )}
 
-          <div className="stats">
-
-            <div className="card">
-              <div className="label">New Leads</div>
-              <div className="number">
-                {loading ? "..." : newLeads.length}
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="label">Quotes Awaiting</div>
-              <div className="number">0</div>
-            </div>
-
-            <div className="card">
-              <div className="label">Appointments</div>
-              <div className="number">
-                {loading ? "..." : appointments.length}
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="label">Pipeline Value</div>
-              <div className="number">
-                ${pipelineValue.toLocaleString()}
-              </div>
-            </div>
-
+        {error && (
+          <div style={styles.error}>
+            {error}
           </div>
+        )}
 
-          <section className="leads">
+        {!loading && !error && leads.length === 0 && (
+          <div style={styles.card}>
+            <h2>No leads yet</h2>
+            <p>
+              Customer requests will appear here.
+            </p>
+          </div>
+        )}
 
-            <div className="leads-header">
-              <h2>Recent Leads</h2>
-              <p>
-                {loading
-                  ? "Loading..."
-                  : `${leads.length} customers`}
-              </p>
-            </div>
+        <div style={styles.grid}>
+          {leads.map((lead) => (
+            <a
+              key={lead.id}
+              href={`/leads/${lead.id}`}
+              style={styles.lead}
+            >
+              <div style={styles.leadHeader}>
+                <div>
+                  <h2 style={styles.name}>
+                    {lead.name}
+                  </h2>
 
-            {loading ? (
-
-              <div className="empty">
-                Loading leads...
-              </div>
-
-            ) : leads.length === 0 ? (
-
-              <div className="empty">
-                No leads yet.
-              </div>
-
-            ) : (
-
-              leads.map((lead) => (
-
-                <div className="lead" key={lead.id}>
-
-                  <div className="lead-top">
-
-                    <div>
-                      <div className="lead-name">
-                        {lead.name}
-                      </div>
-
-                      <div className="lead-service">
-                        {lead.service || "Service not specified"}
-                      </div>
-                    </div>
-
-                    <div className="right">
-
-                      <span className="status">
-                        {lead.status || "New"}
-                      </span>
-
-                      {lead.phone && (
-                        <div className="phone">
-                          {lead.phone}
-                        </div>
-                      )}
-
-                      {lead["appointment date"] && (
-                        <div className="appointment">
-                          Appointment:{" "}
-                          {lead["appointment date"]}
-                        </div>
-                      )}
-
-                    </div>
-
-                  </div>
-
-                  {lead.problem && (
-                    <div className="problem">
-                      <strong>Problem:</strong>{" "}
-                      {lead.problem}
-                    </div>
-                  )}
-
+                  <p style={styles.service}>
+                    {lead.service || "HVAC Service"}
+                  </p>
                 </div>
 
-              ))
+                <span style={styles.status}>
+                  {lead.status || "New"}
+                </span>
+              </div>
 
-            )}
+              <p style={styles.problem}>
+                {lead.problem || "No problem description"}
+              </p>
 
-          </section>
+              {lead.phone && (
+                <p style={styles.detail}>
+                  📞 {lead.phone}
+                </p>
+              )}
 
-        </main>
+              {lead.email && (
+                <p style={styles.detail}>
+                  ✉️ {lead.email}
+                </p>
+              )}
+
+              {lead["appointment date"] && (
+                <p style={styles.detail}>
+                  📅 {lead["appointment date"]}
+                </p>
+              )}
+
+              <div style={styles.view}>
+                View Customer →
+              </div>
+            </a>
+          ))}
+        </div>
 
       </div>
-    </>
+    </main>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#f5f7fa",
+    padding: "40px",
+    fontFamily: "Arial, Helvetica, sans-serif",
+  },
+
+  container: {
+    maxWidth: "1100px",
+    margin: "0 auto",
+  },
+
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "30px",
+  },
+
+  title: {
+    margin: 0,
+    fontSize: "32px",
+  },
+
+  subtitle: {
+    color: "#6b7280",
+  },
+
+  button: {
+    background: "#111827",
+    color: "white",
+    padding: "11px 18px",
+    borderRadius: "8px",
+    textDecoration: "none",
+    fontWeight: 600,
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "20px",
+  },
+
+  lead: {
+    display: "block",
+    background: "white",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "24px",
+    color: "#111827",
+    textDecoration: "none",
+  },
+
+  leadHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "15px",
+  },
+
+  name: {
+    margin: 0,
+    fontSize: "20px",
+  },
+
+  service: {
+    color: "#6b7280",
+    marginTop: "6px",
+  },
+
+  status: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 600,
+  },
+
+  problem: {
+    background: "#f9fafb",
+    padding: "12px",
+    borderRadius: "8px",
+    color: "#4b5563",
+  },
+
+  detail: {
+    color: "#4b5563",
+    fontSize: "14px",
+  },
+
+  view: {
+    marginTop: "20px",
+    paddingTop: "16px",
+    borderTop: "1px solid #e5e7eb",
+    color: "#2563eb",
+    fontWeight: 600,
+  },
+
+  card: {
+    background: "white",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "25px",
+  },
+
+  error: {
+    background: "#fee2e2",
+    color: "#991b1b",
+    padding: "15px",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  },
+};
