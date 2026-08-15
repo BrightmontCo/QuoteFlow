@@ -1,4 +1,3 @@
-```tsx
 import Link from "next/link";
 
 export default function LeadsPage() {
@@ -17,41 +16,29 @@ export default function LeadsPage() {
           margin: "0 auto",
         }}
       >
-        <div
+        <h1>Leads</h1>
+
+        <p>Manage your customers and leads.</p>
+
+        <Link
+          href="/leads/new"
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "30px",
+            display: "inline-block",
+            marginTop: "20px",
+            background: "#111827",
+            color: "white",
+            padding: "12px 20px",
+            borderRadius: "8px",
+            textDecoration: "none",
+            fontWeight: "bold",
           }}
         >
-          <div>
-            <h1 style={{ margin: 0 }}>
-              Leads
-            </h1>
-
-            <p style={{ color: "#666" }}>
-              Manage your customers and leads.
-            </p>
-          </div>
-
-          <Link
-            href="/leads/new"
-            style={{
-              background: "#111827",
-              color: "white",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontWeight: "bold",
-            }}
-          >
-            + New Lead
-          </Link>
-        </div>
+          + New Lead
+        </Link>
 
         <div
           style={{
+            marginTop: "30px",
             background: "white",
             border: "1px solid #e5e7eb",
             borderRadius: "12px",
@@ -59,28 +46,9 @@ export default function LeadsPage() {
           }}
         >
           <h2>Customers</h2>
-
-          <p style={{ color: "#666" }}>
-            Your customers will appear here.
-          </p>
-
-          <Link
-            href="/leads/new"
-            style={{
-              display: "inline-block",
-              marginTop: "15px",
-              background: "#111827",
-              color: "white",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              textDecoration: "none",
-            }}
-          >
-            Add Customer
-          </Link>
+          <p>Your customers will appear here.</p>
         </div>
       </div>
     </main>
   );
 }
-```
