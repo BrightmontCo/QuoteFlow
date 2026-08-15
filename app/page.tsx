@@ -22,25 +22,15 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadLeads() {
-      try {
-        const response = await fetch("/api/leads", {
-          cache: "no-store",
-        });
-
-        const result = await response.json();
-
+    fetch("/api/leads", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((result) => {
         if (result.success) {
           setLeads(result.data || []);
         }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadLeads();
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   const newLeads = leads.filter(
@@ -52,21 +42,18 @@ export default function Home() {
   );
 
   const pipelineValue = leads.reduce(
-    (total, lead) =>
-      total + Number(lead["quote amount"] || 0),
+    (total, lead) => total + Number(lead["quote amount"] || 0),
     0
   );
 
   return (
     <>
       <style>{`
-        * {
-          box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
           margin: 0;
-          font-family: Arial, Helvetica, sans-serif;
+          font-family: Arial, sans-serif;
           background: #f5f7fa;
           color: #111827;
         }
@@ -97,21 +84,21 @@ export default function Home() {
           gap: 8px;
         }
 
-        .nav-item {
+        .nav a {
           display: block;
           padding: 12px 14px;
           border-radius: 8px;
           color: #6b7280;
-          font-size: 14px;
           text-decoration: none;
+          font-size: 14px;
         }
 
-        .nav-item:hover {
+        .nav a:hover {
           background: #f3f4f6;
           color: #111827;
         }
 
-        .nav-item.active {
+        .nav a.active {
           background: #111827;
           color: white;
           font-weight: 600;
@@ -120,7 +107,6 @@ export default function Home() {
         .content {
           flex: 1;
           padding: 40px;
-          min-width: 0;
         }
 
         .header {
@@ -133,8 +119,8 @@ export default function Home() {
         }
 
         .header p {
-          margin-top: 8px;
           color: #6b7280;
+          margin-top: 8px;
         }
 
         .stats {
@@ -151,13 +137,13 @@ export default function Home() {
           padding: 24px;
         }
 
-        .card-label {
+        .label {
           color: #6b7280;
           font-size: 14px;
           margin-bottom: 12px;
         }
 
-        .card-number {
+        .number {
           font-size: 30px;
           font-weight: 700;
         }
@@ -176,13 +162,11 @@ export default function Home() {
 
         .leads-header h2 {
           margin: 0;
-          font-size: 20px;
         }
 
         .leads-header p {
-          margin: 6px 0 0;
           color: #6b7280;
-          font-size: 14px;
+          margin-bottom: 0;
         }
 
         .lead {
@@ -198,44 +182,41 @@ export default function Home() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 20px;
         }
 
         .lead-name {
-          font-size: 17px;
           font-weight: 600;
-          margin-bottom: 5px;
+          font-size: 17px;
         }
 
         .lead-service {
           color: #6b7280;
-          font-size: 14px;
+          margin-top: 5px;
         }
 
-        .lead-right {
+        .right {
           text-align: right;
         }
 
         .status {
-          display: inline-block;
-          padding: 6px 10px;
-          border-radius: 999px;
           background: #dbeafe;
           color: #1d4ed8;
+          padding: 6px 10px;
+          border-radius: 999px;
           font-size: 12px;
           font-weight: 600;
         }
 
-        .lead-phone {
-          margin-top: 8px;
+        .phone {
           color: #6b7280;
+          margin-top: 8px;
           font-size: 14px;
         }
 
         .appointment {
-          margin-top: 4px;
           color: #6b7280;
           font-size: 13px;
+          margin-top: 4px;
         }
 
         .problem {
@@ -244,7 +225,6 @@ export default function Home() {
           background: #f9fafb;
           border-radius: 8px;
           color: #4b5563;
-          font-size: 14px;
         }
 
         .empty {
@@ -274,9 +254,10 @@ export default function Home() {
           .lead-top {
             flex-direction: column;
             align-items: flex-start;
+            gap: 15px;
           }
 
-          .lead-right {
+          .right {
             text-align: left;
           }
         }
@@ -292,23 +273,23 @@ export default function Home() {
 
           <nav className="nav">
 
-            <a href="/" className="nav-item active">
+            <a href="/" className="active">
               Dashboard
             </a>
 
-            <a href="/leads" className="nav-item">
+            <a href="/leads">
               Leads
             </a>
 
-            <a href="#" className="nav-item">
+            <a href="#">
               Quotes
             </a>
 
-            <a href="#" className="nav-item">
+            <a href="#">
               Appointments
             </a>
 
-            <a href="#" className="nav-item">
+            <a href="#">
               Contractor CRM
             </a>
 
@@ -319,65 +300,36 @@ export default function Home() {
         <main className="content">
 
           <div className="header">
-
-            <h1>
-              Dashboard
-            </h1>
-
-            <p>
-              Manage your leads, quotes, and jobs.
-            </p>
-
+            <h1>Dashboard</h1>
+            <p>Manage your leads, quotes, and jobs.</p>
           </div>
 
           <div className="stats">
 
             <div className="card">
-
-              <div className="card-label">
-                New Leads
-              </div>
-
-              <div className="card-number">
+              <div className="label">New Leads</div>
+              <div className="number">
                 {loading ? "..." : newLeads.length}
               </div>
-
             </div>
 
             <div className="card">
-
-              <div className="card-label">
-                Quotes Awaiting
-              </div>
-
-              <div className="card-number">
-                0
-              </div>
-
+              <div className="label">Quotes Awaiting</div>
+              <div className="number">0</div>
             </div>
 
             <div className="card">
-
-              <div className="card-label">
-                Appointments
-              </div>
-
-              <div className="card-number">
+              <div className="label">Appointments</div>
+              <div className="number">
                 {loading ? "..." : appointments.length}
               </div>
-
             </div>
 
             <div className="card">
-
-              <div className="card-label">
-                Pipeline Value
-              </div>
-
-              <div className="card-number">
+              <div className="label">Pipeline Value</div>
+              <div className="number">
                 ${pipelineValue.toLocaleString()}
               </div>
-
             </div>
 
           </div>
@@ -385,17 +337,12 @@ export default function Home() {
           <section className="leads">
 
             <div className="leads-header">
-
-              <h2>
-                Recent Leads
-              </h2>
-
+              <h2>Recent Leads</h2>
               <p>
                 {loading
                   ? "Loading..."
                   : `${leads.length} customers`}
               </p>
-
             </div>
 
             {loading ? (
@@ -414,34 +361,28 @@ export default function Home() {
 
               leads.map((lead) => (
 
-                <div
-                  className="lead"
-                  key={lead.id}
-                >
+                <div className="lead" key={lead.id}>
 
                   <div className="lead-top">
 
                     <div>
-
                       <div className="lead-name">
                         {lead.name}
                       </div>
 
                       <div className="lead-service">
-                        {lead.service ||
-                          "Service not specified"}
+                        {lead.service || "Service not specified"}
                       </div>
-
                     </div>
 
-                    <div className="lead-right">
+                    <div className="right">
 
                       <span className="status">
                         {lead.status || "New"}
                       </span>
 
                       {lead.phone && (
-                        <div className="lead-phone">
+                        <div className="phone">
                           {lead.phone}
                         </div>
                       )}
@@ -459,9 +400,7 @@ export default function Home() {
 
                   {lead.problem && (
                     <div className="problem">
-                      <strong>
-                        Problem:
-                      </strong>{" "}
+                      <strong>Problem:</strong>{" "}
                       {lead.problem}
                     </div>
                   )}
