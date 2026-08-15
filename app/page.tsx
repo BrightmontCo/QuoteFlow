@@ -11,13 +11,13 @@ type Lead = {
   service: string | null;
   problem: string | null;
   status: string | null;
-  quote_amount: number | null;
-  appointment_date: string | null;
+  "quote amount": number | null;
+  "appointment date": string | null;
   notes: string | null;
-  created_at: string | null;
+  "created At": string | null;
 };
 
-export default function Dashboard() {
+export default function Home() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,13 +32,14 @@ export default function Dashboard() {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          throw new Error("Could not load leads");
+          throw new Error(result.error || "Unable to load leads");
         }
 
         setLeads(result.data || []);
       } catch (err) {
-        console.error(err);
-        setError("Unable to load leads.");
+        setError(
+          err instanceof Error ? err.message : "Unable to load leads"
+        );
       } finally {
         setLoading(false);
       }
@@ -48,184 +49,166 @@ export default function Dashboard() {
   }, []);
 
   const newLeads = leads.filter(
-    (lead) => lead.status?.toLowerCase() === "new"
+    (lead) => (lead.status || "").toLowerCase() === "new"
   );
 
   const quotesAwaiting = leads.filter(
-    (lead) => lead.status?.toLowerCase() === "quote sent"
+    (lead) =>
+      (lead.status || "").toLowerCase().includes("quote")
   );
 
-  const booked = leads.filter(
-    (lead) => lead.status?.toLowerCase() === "booked"
+  const appointments = leads.filter(
+    (lead) => lead["appointment date"]
   );
 
   const pipelineValue = leads.reduce(
-    (total, lead) => total + Number(lead.quote_amount || 0),
+    (total, lead) => total + Number(lead["quote amount"] || 0),
     0
   );
 
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900">
+    <main className="min-h-screen bg-gray-100 text-gray-900">
       <div className="flex min-h-screen">
-        {/* SIDEBAR */}
-        <aside className="hidden w-60 border-r bg-white p-6 md:block">
-          <div className="mb-10 text-2xl font-bold">QuoteFlow</div>
+        {/* Sidebar */}
+        <aside className="w-64 bg-white border-r p-6">
+          <h1 className="text-2xl font-bold mb-10">QuoteFlow</h1>
 
-          <nav className="space-y-2">
-            <div className="rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold">
+          <nav className="space-y-3">
+            <div className="rounded-lg bg-black text-white px-4 py-3">
               Dashboard
             </div>
 
-            <div className="px-4 py-3 text-sm text-gray-500">Leads</div>
+            <div className="px-4 py-3 text-gray-600">
+              Leads
+            </div>
 
-            <div className="px-4 py-3 text-sm text-gray-500">Quotes</div>
+            <div className="px-4 py-3 text-gray-600">
+              Quotes
+            </div>
 
-            <div className="px-4 py-3 text-sm text-gray-500">
+            <div className="px-4 py-3 text-gray-600">
               Appointments
+            </div>
+
+            <div className="px-4 py-3 text-gray-600">
+              Contractor CRM
             </div>
           </nav>
         </aside>
 
-        {/* MAIN */}
-        <section className="flex-1 p-6 md:p-10">
-          {/* HEADER */}
-          <header className="mb-8">
-            <p className="text-sm text-gray-500">Contractor CRM</p>
-
-            <h1 className="mt-1 text-3xl font-bold">Dashboard</h1>
-
-            <p className="mt-1 text-gray-500">
+        {/* Main Content */}
+        <section className="flex-1 p-8">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold">Dashboard</h2>
+            <p className="text-gray-500 mt-1">
               Manage your leads, quotes, and jobs.
             </p>
-          </header>
+          </div>
 
-          {/* STATS */}
-          <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="New Leads"
-              value={newLeads.length.toString()}
-            />
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-100 p-4 text-red-700">
+              {error}
+            </div>
+          )}
 
-            <StatCard
-              title="Quotes Awaiting"
-              value={quotesAwaiting.length.toString()}
-            />
-
-            <StatCard
-              title="Appointments"
-              value={booked.length.toString()}
-            />
-
-            <StatCard
-              title="Pipeline Value"
-              value={`$${pipelineValue.toLocaleString()}`}
-            />
-          </section>
-
-          {/* LEADS */}
-          <section className="overflow-hidden rounded-xl border bg-white">
-            <div className="flex items-center justify-between border-b p-5">
-              <div>
-                <h2 className="font-semibold">Recent Leads</h2>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  {leads.length} customer{leads.length === 1 ? "" : "s"}
-                </p>
-              </div>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <p className="text-gray-500 text-sm">New Leads</p>
+              <p className="text-3xl font-bold mt-2">
+                {loading ? "..." : newLeads.length}
+              </p>
             </div>
 
-            {loading && (
-              <div className="p-10 text-center text-gray-500">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <p className="text-gray-500 text-sm">Quotes Awaiting</p>
+              <p className="text-3xl font-bold mt-2">
+                {loading ? "..." : quotesAwaiting.length}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <p className="text-gray-500 text-sm">Appointments</p>
+              <p className="text-3xl font-bold mt-2">
+                {loading ? "..." : appointments.length}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <p className="text-gray-500 text-sm">Pipeline Value</p>
+              <p className="text-3xl font-bold mt-2">
+                ${pipelineValue.toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          {/* Leads */}
+          <div className="bg-white rounded-xl shadow-sm">
+            <div className="p-6 border-b">
+              <h3 className="text-xl font-bold">Recent Leads</h3>
+              <p className="text-gray-500 text-sm mt-1">
+                {loading ? "Loading..." : `${leads.length} customers`}
+              </p>
+            </div>
+
+            {loading ? (
+              <div className="p-8 text-gray-500">
                 Loading leads...
               </div>
-            )}
-
-            {!loading && error && (
-              <div className="p-10 text-center text-red-500">
-                {error}
-              </div>
-            )}
-
-            {!loading && !error && leads.length === 0 && (
-              <div className="p-10 text-center text-gray-500">
+            ) : leads.length === 0 ? (
+              <div className="p-8 text-gray-500">
                 No leads yet.
               </div>
-            )}
-
-            {!loading && !error && leads.length > 0 && (
-              <div>
-                {/* TABLE HEADER */}
-                <div className="hidden grid-cols-4 gap-4 border-b bg-gray-50 px-5 py-3 text-xs font-medium text-gray-500 md:grid">
-                  <div>Customer</div>
-                  <div>Service</div>
-                  <div>Status</div>
-                  <div>Quote</div>
-                </div>
-
-                {/* LEADS */}
+            ) : (
+              <div className="divide-y">
                 {leads.map((lead) => (
                   <div
                     key={lead.id}
-                    className="grid gap-3 border-b px-5 py-5 md:grid-cols-4 md:items-center"
+                    className="p-6 hover:bg-gray-50"
                   >
-                    {/* CUSTOMER */}
-                    <div>
-                      <div className="font-semibold">
-                        {lead.name || "Unknown Customer"}
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
+                        <h4 className="font-semibold text-lg">
+                          {lead.name}
+                        </h4>
+
+                        <p className="text-gray-500 text-sm mt-1">
+                          {lead.service || "Service not specified"}
+                        </p>
+
+                        {lead.problem && (
+                          <p className="text-gray-600 text-sm mt-2">
+                            {lead.problem}
+                          </p>
+                        )}
                       </div>
 
-                      <div className="text-xs text-gray-500">
-                        {lead.email || "No email"}
+                      <div className="text-left md:text-right">
+                        <span className="inline-block rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm">
+                          {lead.status || "New"}
+                        </span>
+
+                        {lead.phone && (
+                          <p className="text-sm text-gray-500 mt-2">
+                            {lead.phone}
+                          </p>
+                        )}
+
+                        {lead["appointment date"] && (
+                          <p className="text-sm text-gray-500">
+                            Appointment:{" "}
+                            {lead["appointment date"]}
+                          </p>
+                        )}
                       </div>
-
-                      {lead.phone && (
-                        <div className="mt-1 text-xs text-gray-500">
-                          {lead.phone}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* SERVICE */}
-                    <div className="text-sm">
-                      {lead.service || "—"}
-                    </div>
-
-                    {/* STATUS */}
-                    <div>
-                      <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
-                        {lead.status || "New"}
-                      </span>
-                    </div>
-
-                    {/* QUOTE */}
-                    <div className="text-sm font-semibold">
-                      {lead.quote_amount
-                        ? `$${Number(lead.quote_amount).toLocaleString()}`
-                        : "—"}
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </section>
+          </div>
         </section>
       </div>
     </main>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-xl border bg-white p-5">
-      <p className="text-sm text-gray-500">{title}</p>
-
-      <p className="mt-2 text-3xl font-bold">{value}</p>
-    </div>
   );
 }
