@@ -20,6 +20,7 @@ type Lead = {
 export default function Home() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadLeads() {
@@ -30,11 +31,17 @@ export default function Home() {
 
         const result = await response.json();
 
-        if (result.success) {
-          setLeads(result.data || []);
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Unable to load leads");
         }
-      } catch (error) {
-        console.error(error);
+
+        setLeads(result.data || []);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load leads"
+        );
       } finally {
         setLoading(false);
       }
@@ -47,168 +54,210 @@ export default function Home() {
     (lead) => (lead.status || "").toLowerCase() === "new"
   );
 
+  const quotesAwaiting = leads.filter(
+    (lead) =>
+      (lead.status || "").toLowerCase() === "quote"
+  );
+
   const appointments = leads.filter(
     (lead) => lead["appointment date"]
   );
 
   const pipelineValue = leads.reduce(
-    (total, lead) => total + Number(lead["quote amount"] || 0),
+    (total, lead) =>
+      total + Number(lead["quote amount"] || 0),
     0
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="min-h-screen bg-gray-100 text-gray-900">
 
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-slate-950 text-white">
-        <div className="flex h-20 items-center border-b border-slate-800 px-7">
-          <div>
-            <div className="text-xl font-bold">QuoteFlow</div>
-            <div className="text-xs text-slate-400">
+      <div className="flex min-h-screen">
+
+        {/* SIDEBAR */}
+        <aside className="w-64 bg-white border-r p-6">
+
+          <h1 className="text-2xl font-bold mb-10">
+            QuoteFlow
+          </h1>
+
+          <nav className="space-y-3">
+
+            <div className="rounded-lg bg-black text-white px-4 py-3">
+              Dashboard
+            </div>
+
+            <div className="px-4 py-3 text-gray-600">
+              Leads
+            </div>
+
+            <div className="px-4 py-3 text-gray-600">
+              Quotes
+            </div>
+
+            <div className="px-4 py-3 text-gray-600">
+              Appointments
+            </div>
+
+            <div className="px-4 py-3 text-gray-600">
               Contractor CRM
             </div>
-          </div>
-        </div>
 
-        <nav className="space-y-2 p-4">
-          <div className="rounded-lg bg-white/10 px-4 py-3 font-medium">
-            Dashboard
-          </div>
+          </nav>
 
-          <div className="rounded-lg px-4 py-3 text-slate-400">
-            Leads
-          </div>
+        </aside>
 
-          <div className="rounded-lg px-4 py-3 text-slate-400">
-            Quotes
-          </div>
+        {/* CONTENT */}
+        <section className="flex-1 p-8">
 
-          <div className="rounded-lg px-4 py-3 text-slate-400">
-            Appointments
-          </div>
-        </nav>
-      </aside>
+          <div className="mb-8">
 
-      <main className="ml-64">
+            <h2 className="text-3xl font-bold">
+              Dashboard
+            </h2>
 
-        <header className="flex h-20 items-center justify-between border-b bg-white px-8">
-          <div>
-            <h1 className="text-xl font-semibold">Dashboard</h1>
-            <p className="text-sm text-slate-500">
-              Welcome back. Here's what's happening.
+            <p className="text-gray-500 mt-1">
+              Manage your leads, quotes, and jobs.
             </p>
+
           </div>
 
-          <button className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-medium text-white">
-            + New Lead
-          </button>
-        </header>
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-100 p-4 text-red-700">
+              {error}
+            </div>
+          )}
 
-        <div className="p-8">
+          {/* STATISTICS */}
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
 
-            <div className="rounded-xl border bg-white p-6">
-              <p className="text-sm text-slate-500">New Leads</p>
-              <p className="mt-3 text-3xl font-bold">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+
+              <p className="text-gray-500 text-sm">
+                New Leads
+              </p>
+
+              <p className="text-3xl font-bold mt-2">
                 {loading ? "..." : newLeads.length}
               </p>
-              <p className="mt-2 text-xs text-slate-400">
-                Leads requiring attention
-              </p>
+
             </div>
 
-            <div className="rounded-xl border bg-white p-6">
-              <p className="text-sm text-slate-500">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+
+              <p className="text-gray-500 text-sm">
                 Quotes Awaiting
               </p>
-              <p className="mt-3 text-3xl font-bold">0</p>
-              <p className="mt-2 text-xs text-slate-400">
-                Quotes awaiting customer
+
+              <p className="text-3xl font-bold mt-2">
+                {loading ? "..." : quotesAwaiting.length}
               </p>
+
             </div>
 
-            <div className="rounded-xl border bg-white p-6">
-              <p className="text-sm text-slate-500">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+
+              <p className="text-gray-500 text-sm">
                 Appointments
               </p>
-              <p className="mt-3 text-3xl font-bold">
+
+              <p className="text-3xl font-bold mt-2">
                 {loading ? "..." : appointments.length}
               </p>
-              <p className="mt-2 text-xs text-slate-400">
-                Upcoming appointments
-              </p>
+
             </div>
 
-            <div className="rounded-xl border bg-white p-6">
-              <p className="text-sm text-slate-500">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+
+              <p className="text-gray-500 text-sm">
                 Pipeline Value
               </p>
-              <p className="mt-3 text-3xl font-bold">
+
+              <p className="text-3xl font-bold mt-2">
                 ${pipelineValue.toLocaleString()}
               </p>
-              <p className="mt-2 text-xs text-slate-400">
-                Total quoted value
-              </p>
+
             </div>
 
           </div>
 
-          <div className="mt-8 rounded-xl border bg-white">
+          {/* RECENT LEADS */}
 
-            <div className="border-b px-6 py-5">
-              <h2 className="font-semibold">Recent Leads</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Your latest customer requests
+          <div className="bg-white rounded-xl shadow-sm">
+
+            <div className="p-6 border-b">
+
+              <h3 className="text-xl font-bold">
+                Recent Leads
+              </h3>
+
+              <p className="text-gray-500 text-sm mt-1">
+                {loading
+                  ? "Loading..."
+                  : `${leads.length} customers`}
               </p>
+
             </div>
 
             {loading ? (
-              <div className="p-8 text-slate-500">
+
+              <div className="p-8 text-gray-500">
                 Loading leads...
               </div>
+
             ) : leads.length === 0 ? (
-              <div className="p-8 text-slate-500">
+
+              <div className="p-8 text-gray-500">
                 No leads yet.
               </div>
+
             ) : (
+
               <div className="divide-y">
 
                 {leads.map((lead) => (
+
                   <div
                     key={lead.id}
-                    className="px-6 py-5 hover:bg-slate-50"
+                    className="p-6 hover:bg-gray-50"
                   >
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-                      <div className="flex items-center gap-4">
+                      <div>
 
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 font-semibold">
-                          {lead.name
-                            ? lead.name.charAt(0).toUpperCase()
-                            : "?"}
-                        </div>
+                        <h4 className="font-semibold text-lg">
+                          {lead.name}
+                        </h4>
 
-                        <div>
-                          <p className="font-semibold">
-                            {lead.name}
+                        <p className="text-gray-500 text-sm mt-1">
+                          {lead.service ||
+                            "Service not specified"}
+                        </p>
+
+                        {lead.problem && (
+                          <p className="text-gray-600 text-sm mt-2">
+                            {lead.problem}
                           </p>
-
-                          <p className="text-sm text-slate-500">
-                            {lead.service || "Service not specified"}
-                          </p>
-                        </div>
+                        )}
 
                       </div>
 
-                      <div className="text-right">
+                      <div className="text-left md:text-right">
 
-                        <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                        <span className="inline-block rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm">
                           {lead.status || "New"}
                         </span>
 
+                        {lead.phone && (
+                          <p className="text-sm text-gray-500 mt-2">
+                            {lead.phone}
+                          </p>
+                        )}
+
                         {lead["appointment date"] && (
-                          <p className="mt-2 text-xs text-slate-500">
+                          <p className="text-sm text-gray-500">
                             Appointment:{" "}
                             {lead["appointment date"]}
                           </p>
@@ -218,43 +267,20 @@ export default function Home() {
 
                     </div>
 
-                    <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-slate-500 md:grid-cols-3">
-
-                      <div>
-                        📞 {lead.phone || "No phone"}
-                      </div>
-
-                      <div>
-                        ✉ {lead.email || "No email"}
-                      </div>
-
-                      <div>
-                        📍 {lead.address || "No address"}
-                      </div>
-
-                    </div>
-
-                    {lead.problem && (
-                      <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                        <span className="font-medium">
-                          Problem:
-                        </span>{" "}
-                        {lead.problem}
-                      </div>
-                    )}
-
                   </div>
+
                 ))}
 
               </div>
+
             )}
 
           </div>
 
-        </div>
+        </section>
 
-      </main>
+      </div>
 
-    </div>
+    </main>
   );
 }
