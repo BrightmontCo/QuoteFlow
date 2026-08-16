@@ -27,16 +27,10 @@ export async function POST(request: Request) {
     const supabase = getSupabase();
     const body = await request.json();
     const payload = {
-      name: body.name,
-      phone: body.phone || null,
-      email: body.email || null,
-      address: body.address || null,
-      service: body.service || null,
-      problem: body.problem || null,
-      status: body.status || "New",
-      "quote amount": body["quote amount"] ?? body.quoteAmount ?? null,
-      "appointment date": body["appointment date"] ?? body.appointmentDate ?? null,
-      notes: body.notes || null,
+      name: body.name?.trim(), phone: body.phone || null, email: body.email || null,
+      address: body.address || null, service: body.service || null, problem: body.problem || null,
+      status: body.status || "New", "quote amount": body["quote amount"] ?? body.quoteAmount ?? null,
+      "appointment date": body["appointment date"] ?? body.appointmentDate ?? null, notes: body.notes || null,
     };
     if (!payload.name) return NextResponse.json({ success: false, error: "Name is required" }, { status: 400 });
     const { data, error } = await supabase.from("leads").insert(payload).select().single();
@@ -53,14 +47,34 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     if (!body.id) return NextResponse.json({ success: false, error: "Lead ID is required" }, { status: 400 });
     const updates: Record<string, unknown> = {};
-    if (body.status !== undefined) updates.status = body.status;
-    if (body.quoteAmount !== undefined) updates["quote amount"] = body.quoteAmount === "" ? null : Number(body.quoteAmount);
-    if (body.appointmentDate !== undefined) updates["appointment date"] = body.appointmentDate || null;
-    if (body.notes !== undefined) updates.notes = body.notes || null;
+    for (const field of ["name", "phone", "email", "address", "service", "problem", "status", "notes"]) {
+      if (body[field] !== undefined) updates[field] = body[field] || null;
+    }
+    if (body.quoteAmount !== undefined || body["quote amount"] !== undefined) {
+      const value = body.quoteAmount ?? body["quote amount"];
+      updates["quote amount"] = value === "" || value === null ? null : Number(value);
+    }
+    if (body.appointmentDate !== undefined || body["appointment date"] !== undefined) {
+      updates["appointment date"] = body.appointmentDate ?? body["appointment date"] ?? null;
+    }
+    if (!Object.keys(updates).length) return NextResponse.json({ success: false, error: "No changes supplied" }, { status: 400 });
     const { data, error } = await supabase.from("leads").update(updates).eq("id", body.id).select();
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     return NextResponse.json({ success: true, data: data || [] });
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Failed to update lead" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = getSupabase();
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return NextResponse.json({ success: false, error: "Lead ID is required" }, { status: 400 });
+    const { error } = await supabase.from("leads").delete().eq("id", id);
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Failed to delete lead" }, { status: 500 });
   }
 }
