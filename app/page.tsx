@@ -65,10 +65,10 @@ export default function Dashboard() {
         <header style={styles.nav}>
           <a href="/" style={styles.logo}><span style={styles.logoMark}>Q</span> QuoteFlow</a>
           <nav style={styles.navLinks}>
-            <a href="/" style={styles.active}>Dashboard</a>
-            <a href="/leads">Leads</a>
-            <a href="/quotes">Quotes</a>
-            <a href="/appointments">Appointments</a>
+            <a href="/" style={styles.navLink}>Dashboard</a>
+            <a href="/leads" style={styles.navLink}>Leads</a>
+            <a href="/quotes" style={styles.navLink}>Quotes</a>
+            <a href="/appointments" style={styles.navLink}>Appointments</a>
           </nav>
           <a href="/leads/new" style={styles.navButton}>+ New Lead</a>
         </header>
@@ -156,7 +156,7 @@ const styles = {
   logo: { display: "flex", alignItems: "center", gap: "9px", color: "#0f172a", textDecoration: "none", fontSize: "20px", fontWeight: 800, letterSpacing: "-0.5px" },
   logoMark: { width: "30px", height: "30px", display: "grid", placeItems: "center", background: "#0f172a", color: "white", borderRadius: "8px", fontSize: "15px" },
   navLinks: { display: "flex", gap: "27px", alignItems: "center", flex: 1, justifyContent: "center" },
-  active: { color: "#0f172a", textDecoration: "none", fontSize: "13px", fontWeight: 700 },
+  navLink: { color: "#475569", textDecoration: "none", fontSize: "13px", fontWeight: 400, lineHeight: 1.5 },
   navButton: { background: "#0f172a", color: "white", textDecoration: "none", padding: "10px 15px", borderRadius: "8px", fontSize: "13px", fontWeight: 700 },
   hero: { display: "flex", justifyContent: "space-between", alignItems: "end", padding: "42px 0 28px" },
   eyebrow: { color: "#64748b", fontSize: "10px", fontWeight: 800, letterSpacing: "1.5px", marginBottom: "8px" },
