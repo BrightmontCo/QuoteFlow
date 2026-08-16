@@ -17,621 +17,140 @@ type Lead = {
   notes: string | null;
 };
 
+type Meta = { appointmentTime?: string; followUpStage?: number; followUpStartedAt?: string; lastContactedAt?: string };
+
+function parseNotes(value: string | null) {
+  if (!value) return { text: "", meta: {} as Meta };
+  const match = value.match(/^\[QuoteFlow Meta\] (\{.*\})\n?([\s\S]*)$/);
+  if (!match) return { text: value, meta: {} as Meta };
+  try { return { text: match[2] || "", meta: JSON.parse(match[1]) as Meta }; } catch { return { text: value, meta: {} as Meta }; }
+}
+
+function buildNotes(text: string, meta: Meta) {
+  return `[QuoteFlow Meta] ${JSON.stringify(meta)}\n${text}`;
+}
+
+function followUpInfo(status: string, meta: Meta) {
+  if (status.toLowerCase() !== "quoted") return null;
+  if (!meta.followUpStartedAt) return { stage: 0, label: "Start follow-up", due: "Now" };
+  const start = new Date(meta.followUpStartedAt);
+  const days = Math.floor((Date.now() - start.getTime()) / 86400000);
+  if (meta.followUpStage && meta.followUpStage >= 2) return { stage: 2, label: "Final follow-up", due: "Day 5+" };
+  if (days >= 5) return { stage: 2, label: "Final follow-up due", due: "Today" };
+  if (days >= 2) return { stage: 1, label: "First follow-up due", due: "Today" };
+  return { stage: 0, label: "First follow-up", due: `In ${Math.max(1, 2 - days)} day(s)` };
+}
+
 export default function CustomerPage() {
   const params = useParams();
   const id = String(params.id);
-
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-
   const [status, setStatus] = useState("New");
   const [quoteAmount, setQuoteAmount] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTime, setAppointmentTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [meta, setMeta] = useState<Meta>({});
 
-  useEffect(() => {
-    async function loadCustomer() {
-      try {
-        const response = await fetch(
-          `/api/leads?id=${encodeURIComponent(id)}`,
-          {
-            cache: "no-store",
-          }
-        );
-
-        const result = await response.json();
-
-        if (
-          result.success &&
-          result.data &&
-          result.data.length > 0
-        ) {
-          const customer = result.data[0];
-
-          setLead(customer);
-
-          setStatus(customer.status || "New");
-
-          setQuoteAmount(
-            customer["quote amount"] !== null &&
-              customer["quote amount"] !== undefined
-              ? String(customer["quote amount"])
-              : ""
-          );
-
-          setAppointmentDate(
-            customer["appointment date"] || ""
-          );
-
-          setNotes(customer.notes || "");
-        }
-      } catch (error) {
-        console.error("Customer loading error:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadCustomer();
-  }, [id]);
-
-  async function saveChanges() {
-    setSaving(true);
-    setMessage("");
-
+  async function loadCustomer() {
     try {
-      const response = await fetch("/api/leads", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: id,
-          status: status,
-          quoteAmount: quoteAmount,
-          appointmentDate: appointmentDate,
-          notes: notes,
-        }),
-      });
-
+      const response = await fetch(`/api/leads?id=${encodeURIComponent(id)}`, { cache: "no-store" });
       const result = await response.json();
-
-      if (!result.success) {
-        setMessage(
-          result.error || "Unable to save changes."
-        );
-        return;
+      if (result.success && result.data?.length) {
+        const customer = result.data[0] as Lead;
+        const parsed = parseNotes(customer.notes);
+        setLead(customer); setStatus(customer.status || "New");
+        setQuoteAmount(customer["quote amount"] == null ? "" : String(customer["quote amount"]));
+        setAppointmentDate(customer["appointment date"] || "");
+        setAppointmentTime(parsed.meta.appointmentTime || ""); setNotes(parsed.text); setMeta(parsed.meta);
       }
-
-      setMessage("Changes saved successfully!");
-
-      if (result.data && result.data.length > 0) {
-        setLead(result.data[0]);
-      }
-    } catch (error) {
-      console.error("Save error:", error);
-
-      setMessage("Unable to save changes.");
-    } finally {
-      setSaving(false);
-    }
+    } catch (error) { console.error("Customer loading error:", error); }
+    finally { setLoading(false); }
   }
 
-  if (loading) {
-    return (
-      <main style={styles.page}>
-        <div style={styles.container}>
-          <p style={styles.loading}>
-            Loading customer...
-          </p>
-        </div>
-      </main>
-    );
+  useEffect(() => { loadCustomer(); }, [id]);
+
+  async function saveChanges(nextMeta = meta) {
+    setSaving(true); setMessage("");
+    try {
+      const response = await fetch("/api/leads", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status, quoteAmount, appointmentDate, notes: buildNotes(notes, { ...nextMeta, appointmentTime }) }) });
+      const result = await response.json();
+      if (!response.ok || !result.success) { setMessage(result.error || "Unable to save changes."); return; }
+      setMessage("Changes saved successfully!"); await loadCustomer();
+    } catch { setMessage("Unable to save changes."); } finally { setSaving(false); }
   }
 
-  if (!lead) {
-    return (
-      <main style={styles.page}>
-        <div style={styles.container}>
-          <a href="/leads" style={styles.back}>
-            ← Back to Leads
-          </a>
-
-          <div style={styles.card}>
-            <h1 style={styles.notFoundTitle}>
-              Customer not found
-            </h1>
-
-            <p style={styles.muted}>
-              Customer ID:
-            </p>
-
-            <code style={styles.code}>
-              {id}
-            </code>
-          </div>
-        </div>
-      </main>
-    );
+  function startFollowUp() {
+    const next = { ...meta, followUpStage: 0, followUpStartedAt: new Date().toISOString() };
+    setMeta(next); saveChanges(next);
   }
+
+  function markFollowUpSent() {
+    const current = followUpInfo(status, meta);
+    const next = { ...meta, followUpStage: Math.min(2, (current?.stage || 0) + 1), lastContactedAt: new Date().toISOString() };
+    setMeta(next); saveChanges(next);
+  }
+
+  if (loading) return <main style={styles.page}><div style={styles.container}><p style={styles.muted}>Loading customer...</p></div></main>;
+  if (!lead) return <main style={styles.page}><div style={styles.container}><a href="/leads" style={styles.back}>← Back to Leads</a><div style={styles.card}><h1>Customer not found</h1><code>{id}</code></div></div></main>;
+
+  const followUp = followUpInfo(status, meta);
+  const quote = Number(quoteAmount || 0);
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-
-        {/* BACK BUTTON */}
-
-        <a href="/leads" style={styles.back}>
-          ← Back to Leads
-        </a>
-
-        {/* CUSTOMER HEADER */}
-
-        <div style={styles.header}>
-          <div>
-            <h1 style={styles.title}>
-              {lead.name}
-            </h1>
-
-            <p style={styles.subtitle}>
-              {lead.service || "HVAC Service"}
-            </p>
-          </div>
-
-          <div style={styles.statusBadge}>
-            {status}
-          </div>
-        </div>
-
-        {/* CUSTOMER INFORMATION */}
+        <nav style={styles.nav}><a href="/" style={styles.navLink}>Dashboard</a><a href="/leads" style={styles.navLink}>Leads</a><a href="/quotes" style={styles.navLink}>Quotes</a><a href="/appointments" style={styles.navLink}>Appointments</a></nav>
+        <a href="/leads" style={styles.back}>← Back to Leads</a>
+        <div style={styles.header}><div><h1 style={styles.title}>{lead.name}</h1><p style={styles.subtitle}>{lead.service || "HVAC Service"} {quote ? `• $${quote.toFixed(2)}` : ""}</p></div><span style={styles.status}>{status}</span></div>
 
         <div style={styles.grid}>
-
-          <section style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Customer Information
-            </h2>
-
-            <div style={styles.info}>
-              <div style={styles.label}>
-                Full Name
-              </div>
-
-              <div style={styles.value}>
-                {lead.name}
-              </div>
-            </div>
-
-            <div style={styles.info}>
-              <div style={styles.label}>
-                Phone
-              </div>
-
-              <div style={styles.value}>
-                {lead.phone || "—"}
-              </div>
-            </div>
-
-            <div style={styles.info}>
-              <div style={styles.label}>
-                Email
-              </div>
-
-              <div style={styles.value}>
-                {lead.email || "—"}
-              </div>
-            </div>
-
-            <div style={styles.info}>
-              <div style={styles.label}>
-                Address
-              </div>
-
-              <div style={styles.value}>
-                {lead.address || "—"}
-              </div>
-            </div>
-          </section>
-
-          {/* SERVICE */}
-
-          <section style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Service Request
-            </h2>
-
-            <div style={styles.info}>
-              <div style={styles.label}>
-                Service
-              </div>
-
-              <div style={styles.value}>
-                {lead.service || "—"}
-              </div>
-            </div>
-
-            <div style={styles.info}>
-              <div style={styles.label}>
-                Problem
-              </div>
-
-              <div style={styles.problem}>
-                {lead.problem || "No problem description"}
-              </div>
-            </div>
-          </section>
-
-          {/* EDITABLE APPOINTMENT */}
-
-          <section style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Appointment
-            </h2>
-
-            <label style={styles.label}>
-              Appointment Date
-            </label>
-
-            <input
-              type="date"
-              value={appointmentDate}
-              onChange={(event) => {
-                setAppointmentDate(
-                  event.target.value
-                );
-              }}
-              style={styles.input}
-            />
-
-            <label style={styles.label}>
-              Status
-            </label>
-
-            <select
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-              }}
-              style={styles.input}
-            >
-              <option value="New">
-                New
-              </option>
-
-              <option value="Contacted">
-                Contacted
-              </option>
-
-              <option value="Quoted">
-                Quoted
-              </option>
-
-              <option value="Scheduled">
-                Scheduled
-              </option>
-
-              <option value="Completed">
-                Completed
-              </option>
-
-              <option value="Cancelled">
-                Cancelled
-              </option>
-            </select>
-          </section>
-
-          {/* EDITABLE QUOTE */}
-
-          <section style={styles.card}>
-            <h2 style={styles.cardTitle}>
-              Quote
-            </h2>
-
-            <label style={styles.label}>
-              Quote Amount
-            </label>
-
-            <div style={styles.moneyInput}>
-              <span style={styles.dollar}>
-                $
-              </span>
-
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={quoteAmount}
-                onChange={(event) => {
-                  setQuoteAmount(
-                    event.target.value
-                  );
-                }}
-                style={styles.moneyField}
-              />
-            </div>
-
-            <div style={styles.quotePreview}>
-              $
-              {quoteAmount
-                ? Number(quoteAmount).toFixed(2)
-                : "0.00"}
-            </div>
-          </section>
-
+          <section style={styles.card}><h2 style={styles.cardTitle}>Customer Information</h2><Info label="Full Name" value={lead.name}/><Info label="Phone" value={lead.phone || "—"}/><Info label="Email" value={lead.email || "—"}/><Info label="Address" value={lead.address || "—"}/></section>
+          <section style={styles.card}><h2 style={styles.cardTitle}>Service Request</h2><Info label="Service" value={lead.service || "—"}/><div style={styles.label}>Problem</div><div style={styles.problem}>{lead.problem || "No problem description"}</div></section>
+          <section style={styles.card}><h2 style={styles.cardTitle}>Quote & Status</h2><label style={styles.label}>Status</label><select value={status} onChange={e => setStatus(e.target.value)} style={styles.input}><option>New</option><option>Contacted</option><option>Quoted</option><option>Scheduled</option><option>Completed</option><option>Cancelled</option></select><label style={styles.label}>Quote Amount</label><input type="number" min="0" step="0.01" value={quoteAmount} onChange={e => setQuoteAmount(e.target.value)} style={styles.input}/></section>
+          <section style={styles.card}><h2 style={styles.cardTitle}>Appointment</h2><label style={styles.label}>Date</label><input type="date" value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} style={styles.input}/><label style={styles.label}>Time</label><input type="time" value={appointmentTime} onChange={e => setAppointmentTime(e.target.value)} style={styles.input}/>{appointmentDate && appointmentTime && <div style={styles.confirm}>📅 {appointmentDate} at {appointmentTime}</div>}</section>
         </div>
 
-        {/* NOTES */}
+        <section style={styles.card}><div style={styles.cardHeader}><div><h2 style={styles.cardTitle}>Follow-ups</h2><p style={styles.muted}>Keep quoted customers from slipping through the cracks.</p></div>{followUp && <span style={styles.due}>{followUp.due}</span>}</div>{status.toLowerCase() !== "quoted" ? <p style={styles.muted}>Set the status to <strong>Quoted</strong> to start a follow-up sequence.</p> : !meta.followUpStartedAt ? <div><p style={styles.message}>No follow-up sequence started.</p><button onClick={startFollowUp} style={styles.button}>Start 2-day follow-up</button></div> : <div style={styles.followRow}><div><strong>{followUp?.label}</strong><p style={styles.muted}>Suggested message: “Hi {lead.name.split(" ")[0]}, just checking in about your HVAC quote. Let us know if you'd like to schedule.”</p>{meta.lastContactedAt && <small style={styles.muted}>Last marked contacted: {new Date(meta.lastContactedAt).toLocaleString()}</small>}</div>{followUp && followUp.stage < 2 && <button onClick={markFollowUpSent} style={styles.button}>Mark Follow-up Sent</button>}</div>}</section>
 
-        <section style={styles.card}>
-          <h2 style={styles.cardTitle}>
-            Notes
-          </h2>
-
-          <textarea
-            value={notes}
-            onChange={(event) => {
-              setNotes(event.target.value);
-            }}
-            placeholder="Add notes about this customer..."
-            style={styles.textarea}
-          />
-        </section>
-
-        {/* SAVE */}
-
-        <div style={styles.saveArea}>
-
-          {message && (
-            <div
-              style={
-                message.includes("successfully")
-                  ? styles.success
-                  : styles.error
-              }
-            >
-              {message}
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={saveChanges}
-            disabled={saving}
-            style={{
-              ...styles.saveButton,
-              opacity: saving ? 0.6 : 1,
-            }}
-          >
-            {saving
-              ? "Saving..."
-              : "Save Changes"}
-          </button>
-
-        </div>
-
+        <section style={styles.card}><h2 style={styles.cardTitle}>Notes</h2><textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add notes about this customer..." style={styles.textarea}/></section>
+        <div style={styles.saveArea}>{message && <div style={message.includes("successfully") ? styles.success : styles.error}>{message}</div>}<button onClick={() => saveChanges()} disabled={saving} style={styles.button}>{saving ? "Saving..." : "Save Changes"}</button></div>
       </div>
     </main>
   );
 }
 
+function Info({ label, value }: { label: string; value: string }) { return <div style={styles.info}><div style={styles.label}>{label}</div><div>{value}</div></div>; }
+
 const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#f5f7fa",
-    color: "#111827",
-    fontFamily:
-      "Arial, Helvetica, sans-serif",
-    padding: "40px 20px",
-  },
-
-  container: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-  },
-
-  loading: {
-    fontSize: "16px",
-    color: "#6b7280",
-  },
-
-  back: {
-    display: "inline-block",
-    marginBottom: "25px",
-    color: "#2563eb",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: 600,
-  },
-
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "30px",
-  },
-
-  title: {
-    margin: 0,
-    fontSize: "32px",
-    fontWeight: 700,
-  },
-
-  subtitle: {
-    marginTop: "8px",
-    marginBottom: 0,
-    color: "#6b7280",
-    fontSize: "15px",
-  },
-
-  statusBadge: {
-    background: "#dbeafe",
-    color: "#1d4ed8",
-    padding: "9px 15px",
-    borderRadius: "999px",
-    fontSize: "13px",
-    fontWeight: 700,
-  },
-
-  grid: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(2, minmax(0, 1fr))",
-    gap: "20px",
-  },
-
-  card: {
-    background: "white",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    padding: "24px",
-    marginBottom: "20px",
-  },
-
-  cardTitle: {
-    margin: "0 0 20px",
-    fontSize: "18px",
-    fontWeight: 700,
-  },
-
-  info: {
-    marginBottom: "18px",
-  },
-
-  label: {
-    display: "block",
-    color: "#6b7280",
-    fontSize: "13px",
-    fontWeight: 600,
-    marginBottom: "7px",
-  },
-
-  value: {
-    fontSize: "15px",
-    color: "#111827",
-  },
-
-  problem: {
-    background: "#f9fafb",
-    borderRadius: "8px",
-    padding: "12px",
-    fontSize: "14px",
-    color: "#374151",
-    minHeight: "40px",
-  },
-
-  input: {
-    display: "block",
-    width: "100%",
-    boxSizing: "border-box" as const,
-    padding: "12px",
-    marginBottom: "18px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    background: "white",
-    color: "#111827",
-    fontSize: "14px",
-    cursor: "pointer",
-  },
-
-  moneyInput: {
-    display: "flex",
-    alignItems: "center",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    overflow: "hidden",
-    background: "white",
-    marginBottom: "15px",
-  },
-
-  dollar: {
-    paddingLeft: "12px",
-    color: "#6b7280",
-    fontSize: "15px",
-  },
-
-  moneyField: {
-    flex: 1,
-    border: "none",
-    outline: "none",
-    padding: "12px",
-    fontSize: "14px",
-    background: "white",
-    color: "#111827",
-  },
-
-  quotePreview: {
-    fontSize: "28px",
-    fontWeight: 700,
-    color: "#111827",
-  },
-
-  textarea: {
-    display: "block",
-    width: "100%",
-    boxSizing: "border-box" as const,
-    minHeight: "130px",
-    padding: "12px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontFamily:
-      "Arial, Helvetica, sans-serif",
-    resize: "vertical" as const,
-    outline: "none",
-  },
-
-  saveArea: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: "15px",
-    marginTop: "5px",
-  },
-
-  saveButton: {
-    background: "#111827",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    padding: "13px 24px",
-    fontSize: "14px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
-  success: {
-    color: "#166534",
-    background: "#dcfce7",
-    border: "1px solid #bbf7d0",
-    borderRadius: "8px",
-    padding: "10px 14px",
-    fontSize: "13px",
-  },
-
-  error: {
-    color: "#991b1b",
-    background: "#fee2e2",
-    border: "1px solid #fecaca",
-    borderRadius: "8px",
-    padding: "10px 14px",
-    fontSize: "13px",
-  },
-
-  notFoundTitle: {
-    marginTop: 0,
-  },
-
-  muted: {
-    color: "#6b7280",
-    marginBottom: "5px",
-  },
-
-  code: {
-    background: "#f3f4f6",
-    padding: "8px",
-    borderRadius: "6px",
-  },
+  page: { minHeight: "100vh", background: "#f8fafc", color: "#0f172a", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", paddingBottom: "60px" },
+  container: { maxWidth: "1120px", margin: "0 auto", padding: "0 28px" },
+  nav: { height: "70px", display: "flex", alignItems: "center", justifyContent: "center", gap: "28px", borderBottom: "1px solid #e2e8f0", marginBottom: "30px" },
+  navLink: { color: "#475569", textDecoration: "none", fontSize: "13px", fontWeight: 400 },
+  back: { display: "inline-block", color: "#475569", textDecoration: "none", fontSize: "13px", marginBottom: "20px" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "25px" },
+  title: { margin: 0, fontSize: "32px", letterSpacing: "-1px" },
+  subtitle: { margin: "7px 0 0", color: "#64748b", fontSize: "14px" },
+  status: { background: "#eef2ff", color: "#4338ca", padding: "8px 13px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 },
+  grid: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "18px" },
+  card: { background: "white", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "22px", marginBottom: "18px", boxShadow: "0 1px 2px rgba(15,23,42,.03)" },
+  cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "start", gap: "20px" },
+  cardTitle: { margin: "0 0 18px", fontSize: "16px" },
+  info: { marginBottom: "16px", fontSize: "14px" },
+  label: { display: "block", color: "#64748b", fontSize: "12px", fontWeight: 600, marginBottom: "7px" },
+  muted: { color: "#64748b", fontSize: "12px", lineHeight: 1.6 },
+  problem: { background: "#f8fafc", padding: "12px", borderRadius: "8px", fontSize: "13px", minHeight: "45px" },
+  input: { width: "100%", boxSizing: "border-box" as const, padding: "11px", border: "1px solid #cbd5e1", borderRadius: "8px", marginBottom: "16px", background: "white", color: "#0f172a" },
+  textarea: { width: "100%", boxSizing: "border-box" as const, minHeight: "130px", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px", resize: "vertical" as const, fontFamily: "inherit" },
+  confirm: { background: "#ecfdf5", color: "#047857", padding: "10px", borderRadius: "8px", fontSize: "12px" },
+  due: { background: "#fff7ed", color: "#c2410c", padding: "7px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700 },
+  message: { background: "#f8fafc", padding: "12px", borderRadius: "8px", fontSize: "13px" },
+  followRow: { display: "flex", justifyContent: "space-between", gap: "25px", alignItems: "center" },
+  button: { background: "#0f172a", color: "white", border: 0, borderRadius: "8px", padding: "11px 16px", fontSize: "12px", fontWeight: 700, cursor: "pointer", textDecoration: "none", whiteSpace: "nowrap" as const },
+  saveArea: { display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px" },
+  success: { background: "#dcfce7", color: "#166534", padding: "9px 12px", borderRadius: "8px", fontSize: "12px" },
+  error: { background: "#fee2e2", color: "#991b1b", padding: "9px 12px", borderRadius: "8px", fontSize: "12px" },
 };
