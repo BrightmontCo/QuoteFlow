@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "QuoteFlow | Contractor CRM",
-  description: "Manage HVAC leads, quotes, appointments, and jobs.",
+  title: "QuoteFlow | HVAC CRM",
+  description: "Manage HVAC leads, quotes, appointments, and jobs in one place.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -11,34 +11,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <style>{`
-          nav a[href="/"],
-          nav a[href="/leads"],
-          nav a[href="/quotes"],
-          nav a[href="/appointments"] {
-            color: #64748b !important;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-            font-size: 14px !important;
-            font-weight: 400 !important;
-            line-height: 1.4 !important;
-            text-decoration: none !important;
-            text-transform: none !important;
-          }
-
-          nav > a:first-child {
-            color: #0f172a !important;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-            font-size: 20px !important;
-            font-weight: 800 !important;
-            text-decoration: none !important;
+          * { box-sizing: border-box; }
+          html, body { margin: 0; padding: 0; }
+          body { background: #f7f8fa; }
+          button, input, select, textarea { font: inherit; }
+          a { -webkit-tap-highlight-color: transparent; }
+          @media (max-width: 760px) {
+            nav { gap: 14px !important; flex-wrap: wrap !important; height: auto !important; min-height: 72px !important; padding: 14px 0 !important; }
+            nav > div { gap: 14px !important; flex-wrap: wrap !important; }
+            main > div { padding-left: 16px !important; padding-right: 16px !important; }
+            section[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            table { min-width: 720px; }
           }
         `}</style>
       </head>
-      <body
-        style={{
-          margin: 0,
-          fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        }}
-      >
+      <body style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
         {children}
       </body>
     </html>
