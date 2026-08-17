@@ -1,165 +1,33 @@
 "use client";
-
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-
-type Lead = {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  service: string | null;
-  problem: string | null;
-  status: string | null;
-  "quote amount": number | null;
-  "appointment date": string | null;
-  created_at?: string | null;
-};
-
-const money = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-const dateValue = (v: string) => new Date(v.includes("T") ? v : `${v}T00:00:00`);
-
-export default function Dashboard() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  async function loadLeads() {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/leads", { cache: "no-store" });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error || "Could not load leads");
-      setLeads(Array.isArray(json.data) ? json.data : []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load dashboard");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { void loadLeads(); }, []);
-
-  const data = useMemo(() => {
-    const count = (status: string) => leads.filter((l) => (l.status || "new").toLowerCase() === status).length;
-    const quoted = leads.filter((l) => Number(l["quote amount"] || 0) > 0);
-    const pipeline = quoted.filter((l) => !["completed", "cancelled"].includes((l.status || "new").toLowerCase())).reduce((sum, l) => sum + Number(l["quote amount"] || 0), 0);
-    const won = leads.filter((l) => (l.status || "").toLowerCase() === "completed").reduce((sum, l) => sum + Number(l["quote amount"] || 0), 0);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const upcoming = leads.filter((l) => l["appointment date"] && (l.status || "").toLowerCase() !== "cancelled" && dateValue(l["appointment date"]!) >= today).sort((a, b) => dateValue(a["appointment date"]!).getTime() - dateValue(b["appointment date"]!).getTime()).slice(0, 5);
-    const recent = [...leads].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 6);
-    return { newLeads: count("new"), contacted: count("contacted"), quoted: count("quoted"), scheduled: count("scheduled"), completed: count("completed"), quotes: quoted.length, pipeline, won, upcoming, recent };
-  }, [leads]);
-
-  return (
-    <main style={styles.page}>
-      <div style={styles.container}>
-        <header style={styles.nav}>
-          <a href="/" style={styles.logo}><span style={styles.logoMark}>Q</span>QuoteFlow</a>
-          <nav style={styles.links}>
-            <a href="/" style={styles.active}>Dashboard</a>
-            <a href="/leads" style={styles.link}>Leads</a>
-            <a href="/quotes" style={styles.link}>Quotes</a>
-            <a href="/appointments" style={styles.link}>Appointments</a>
-          </nav>
-          <a href="/leads/new" style={styles.primary}>+ New Lead</a>
-        </header>
-
-        <section style={styles.hero}>
-          <div><div style={styles.eyebrow}>HVAC LEAD MANAGEMENT</div><h1 style={styles.title}>Dashboard</h1><p style={styles.subtitle}>Track leads, quotes, appointments, and jobs in one place.</p></div>
-          <button onClick={() => void loadLeads()} style={styles.refresh}>↻ Refresh</button>
-        </section>
-
-        {error && <div style={styles.error}>{error}<button onClick={() => void loadLeads()} style={styles.retry}>Try again</button></div>}
-
-        <section style={styles.stats}>
-          <Stat href="/leads" label="New Leads" value={loading ? "—" : data.newLeads} detail="Ready for follow-up" icon="↗" />
-          <Stat href="/quotes" label="Open Quotes" value={loading ? "—" : data.quotes} detail={`${data.quoted} quoted`} icon="$" />
-          <Stat href="/appointments" label="Upcoming Jobs" value={loading ? "—" : data.upcoming.length} detail={`${data.scheduled} scheduled total`} icon="✓" />
-          <Stat href="/quotes" label="Pipeline Value" value={loading ? "—" : money(data.pipeline)} detail={`${money(data.won)} completed`} icon="◈" />
-        </section>
-
-        <section style={styles.grid}>
-          <Card title="Recent Leads" subtitle="The latest customer requests." href="/leads" link="View all →">
-            {loading ? <Center>Loading leads...</Center> : data.recent.length ? data.recent.map((lead) => <LeadRow key={lead.id} lead={lead} />) : <Empty />}
-          </Card>
-          <Card title="Upcoming Jobs" subtitle="Your next scheduled appointments." href="/appointments" link="Calendar →">
-            {loading ? <Center>Loading appointments...</Center> : data.upcoming.length ? data.upcoming.map((lead) => <AppointmentRow key={lead.id} lead={lead} />) : <Center><div style={styles.emptyIcon}>✓</div><strong>No upcoming jobs</strong><span style={styles.muted}>Scheduled appointments will appear here.</span></Center>}
-          </Card>
-        </section>
-
-        <section style={styles.grid}>
-          <Card title="Sales Pipeline" subtitle="See where your leads stand." href="/leads" link="Manage →">
-            <div style={styles.pipelineBox}>
-              {[["New", data.newLeads], ["Contacted", data.contacted], ["Quoted", data.quoted], ["Scheduled", data.scheduled], ["Completed", data.completed]].map(([label, count]) => <Pipeline key={String(label)} label={String(label)} count={Number(count)} total={leads.length} />)}
-            </div>
-          </Card>
-          <div style={styles.action}><span style={styles.actionLabel}>QUICK ACTION</span><div style={styles.actionIcon}>+</div><h2 style={styles.actionTitle}>Add a customer</h2><p style={styles.actionText}>Create a lead, add service details, and keep the job moving.</p><a href="/leads/new" style={styles.actionButton}>Create New Lead →</a></div>
-        </section>
-      </div>
-    </main>
-  );
+import { useEffect,useMemo,useState } from "react";
+type Lead={id:string;name:string;phone:string|null;email:string|null;address:string|null;service:string|null;problem:string|null;status:string|null;"quote amount":number|null;"appointment date":string|null;notes:string|null;created_at?:string|null};
+type Form={name:string;phone:string;email:string;address:string;service:string;status:string;quoteAmount:string;appointmentDate:string;problem:string;notes:string};
+const empty:Form={name:"",phone:"",email:"",address:"",service:"AC Repair",status:"New",quoteAmount:"",appointmentDate:"",problem:"",notes:""};
+const statuses=["New","Contacted","Quoted","Scheduled","Completed","Cancelled"];
+const money=(n:number)=>`$${n.toLocaleString("en-US",{maximumFractionDigits:0})}`;
+export default function App(){
+ const[L,setL]=useState<Lead[]>([]),[tab,setTab]=useState("Dashboard"),[q,setQ]=useState(""),[filter,setFilter]=useState("All"),[loading,setLoading]=useState(true),[err,setErr]=useState(""),[notice,setNotice]=useState(""),[edit,setEdit]=useState<Lead|null>(null),[form,setForm]=useState<Form>(empty),[saving,setSaving]=useState(false);
+ const load=async()=>{setLoading(true);setErr("");try{const r=await fetch("/api/leads",{cache:"no-store"}),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||"Could not load data");setL(x.data||[])}catch(e){setErr(e instanceof Error?e.message:"Could not load data")}finally{setLoading(false)}};
+ useEffect(()=>{void load()},[]);
+ const data=useMemo(()=>L.filter(l=>{const s=q.toLowerCase();const hit=!s||[l.name,l.phone,l.email,l.service,l.address].some(v=>(v||"").toLowerCase().includes(s));return hit&&(filter==="All"||l.status===filter)}),[L,q,filter]);
+ const quotes=data.filter(l=>Number(l["quote amount"]||0)>0),apps=data.filter(l=>!!l["appointment date"]&&l.status!=="Cancelled");
+ const pipeline=L.filter(l=>Number(l["quote amount"]||0)>0&&!['Completed','Cancelled'].includes(l.status||"")).reduce((n,l)=>n+Number(l["quote amount"]||0),0),won=L.filter(l=>l.status==="Completed").reduce((n,l)=>n+Number(l["quote amount"]||0),0);
+ const count=(s:string)=>L.filter(l=>l.status===s).length;
+ const open=(l?:Lead)=>{setEdit(l||null);setForm(l?{name:l.name||"",phone:l.phone||"",email:l.email||"",address:l.address||"",service:l.service||"AC Repair",status:l.status||"New",quoteAmount:l["quote amount"]==null?"":String(l["quote amount"]),appointmentDate:l["appointment date"]||"",problem:l.problem||"",notes:l.notes||""}:empty);setNotice("")};
+ const save=async(e:React.FormEvent)=>{e.preventDefault();setSaving(true);try{const body={...form,quoteAmount:form.quoteAmount||null,appointmentDate:form.appointmentDate||null};const r=await fetch("/api/leads",{method:edit?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(edit?{...body,id:edit.id}:body)}),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||"Save failed");setEdit(null);setNotice(edit?"Customer updated":"Customer added");await load()}catch(e){setNotice(e instanceof Error?e.message:"Save failed")}finally{setSaving(false)}};
+ const update=async(id:string,body:Record<string,string>)=>{try{const r=await fetch("/api/leads",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,...body})}),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||"Update failed");setL(v=>v.map(l=>l.id===id?x.data[0]:l))}catch(e){setErr(e instanceof Error?e.message:"Update failed")}};
+ const remove=async(l:Lead)=>{if(!confirm(`Delete ${l.name}?`))return;const r=await fetch(`/api/leads?id=${l.id}`,{method:"DELETE"}),x=await r.json();if(!r.ok||!x.success)setErr(x.error||"Delete failed");else{setNotice("Customer deleted");await load()}};
+ return <main style={s.page}><div style={s.wrap}><header style={s.nav}><b style={s.brand}><i style={s.logo}>Q</i>QuoteFlow</b><div style={s.tabs}>{["Dashboard","Leads","Quotes","Appointments"].map(x=><button key={x} onClick={()=>{setTab(x);setQ("");setFilter("All")}} style={{...s.tab,...(tab===x?s.on:{})}}>{x}</button>)}</div><button onClick={()=>open()} style={s.primary}>+ New Lead</button></header><div style={s.hero}><div><small style={s.eyebrow}>HVAC CRM</small><h1>{tab}</h1><p>{tab==="Dashboard"?"Manage customers, quotes and jobs from one place.":"Search, edit and update your HVAC workflow."}</p></div><button onClick={()=>void load()} style={s.secondary}>↻ Refresh</button></div>{err&&<div style={s.error}>{err}</div>}{notice&&<div style={s.notice}>{notice}</div>}
+ {tab==="Dashboard"?<Dashboard L={L} loading={loading} count={count} pipeline={pipeline} won={won} setTab={setTab} open={()=>open()}/>:<><div style={s.toolbar}><input placeholder="Search customers..." value={q} onChange={e=>setQ(e.target.value)} style={s.input}/><select value={filter} onChange={e=>setFilter(e.target.value)} style={s.select}><option>All</option>{statuses.map(x=><option key={x}>{x}</option>)}</select><span style={s.muted}>{tab==="Leads"?data.length:tab==="Quotes"?quotes.length:apps.length} results</span></div><section style={s.card}>{loading?<div style={s.empty}>Loading...</div>:tab==="Leads"?<Leads rows={data} open={open} remove={remove} update={update}/>:tab==="Quotes"?<Quotes rows={quotes} open={open} update={update}/>:<Appointments rows={apps} open={open} update={update}/>}</section></>}
+ {edit!==null&&<Modal title={edit?"Edit Customer":"New Customer"} close={()=>setEdit(null)}><form onSubmit={save}><div style={s.grid}>{field("Full name *",<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} style={s.input}/>)}{field("Phone",<input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} style={s.input}/>)}{field("Email",<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} style={s.input}/>)}{field("Address",<input value={form.address} onChange={e=>setForm({...form,address:e.target.value})} style={s.input}/>)}{field("Service",<select value={form.service} onChange={e=>setForm({...form,service:e.target.value})} style={s.input}>{["AC Repair","AC Installation","AC Maintenance","Heating","Ductwork","Other"].map(x=><option key={x}>{x}</option>)}</select>)}{field("Status",<select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={s.input}>{statuses.map(x=><option key={x}>{x}</option>)}</select>)}{field("Quote amount",<input type="number" min="0" step=".01" value={form.quoteAmount} onChange={e=>setForm({...form,quoteAmount:e.target.value})} style={s.input}/>)}{field("Appointment date",<input type="date" value={form.appointmentDate} onChange={e=>setForm({...form,appointmentDate:e.target.value})} style={s.input}/>)}</div>{field("Problem",<textarea value={form.problem} onChange={e=>setForm({...form,problem:e.target.value})} style={s.textarea}/>)}{field("Notes",<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} style={s.textarea}/>)}{notice&&<div style={s.error}>{notice}</div>}<div style={s.actions}><button type="button" onClick={()=>setEdit(null)} style={s.secondary}>Cancel</button><button disabled={saving} style={s.primary}>{saving?"Saving...":edit?"Save Changes":"Create Lead"}</button></div></form></Modal>}</div></main>
 }
-
-function Stat({ href, label, value, detail, icon }: { href: string; label: string; value: string | number; detail: string; icon: string }) { return <a href={href} style={styles.stat}><div style={styles.statTop}><span style={styles.statLabel}>{label}</span><span style={styles.statIcon}>{icon}</span></div><div style={styles.statValue}>{value}</div><div style={styles.statDetail}>{detail}</div></a>; }
-function Card({ title, subtitle, href, link, children }: { title: string; subtitle: string; href: string; link: string; children: ReactNode }) { return <div style={styles.card}><div style={styles.cardHeader}><div><h2 style={styles.cardTitle}>{title}</h2><p style={styles.cardSubtitle}>{subtitle}</p></div><a href={href} style={styles.view}>{link}</a></div>{children}</div>; }
-function LeadRow({ lead }: { lead: Lead }) { return <a href={`/leads/${lead.id}`} style={styles.row}><div style={styles.avatar}>{(lead.name || "?")[0].toUpperCase()}</div><div style={styles.rowMain}><strong>{lead.name || "Unnamed customer"}</strong><span style={styles.muted}>{lead.service || "Service not specified"}</span></div><span style={statusStyle(lead.status)}>{lead.status || "New"}</span><span style={styles.contact}>{lead.phone || lead.email || "No contact"}</span><span>→</span></a>; }
-function AppointmentRow({ lead }: { lead: Lead }) { const d = dateValue(lead["appointment date"]!); return <a href={`/leads/${lead.id}`} style={styles.appointment}><div style={styles.dateBox}><strong>{d.toLocaleDateString("en-US", { day: "2-digit" })}</strong><span>{d.toLocaleDateString("en-US", { month: "short" })}</span></div><div style={styles.rowMain}><strong>{lead.name}</strong><span style={styles.muted}>{lead.service || "HVAC Service"}</span></div><span>→</span></a>; }
-function Pipeline({ label, count, total }: { label: string; count: number; total: number }) { const percent = total ? Math.round((count / total) * 100) : 0; return <div style={styles.pipeline}><div style={styles.pipelineTop}><span>{label}</span><strong>{count}</strong></div><div style={styles.track}><div style={{ ...styles.fill, width: `${percent}%` }} /></div></div>; }
-function Center({ children }: { children: ReactNode }) { return <div style={styles.center}>{children}</div>; }
-function Empty() { return <Center><div style={styles.emptyIcon}>+</div><strong>No leads yet</strong><span style={styles.muted}>Create your first customer to get started.</span><a href="/leads/new" style={styles.smallButton}>Create Lead</a></Center>; }
-function statusStyle(value: string | null): CSSProperties { const s = (value || "new").toLowerCase(); const colors: Record<string, CSSProperties> = { new: { background: "#fff7ed", color: "#c2410c" }, contacted: { background: "#eff6ff", color: "#2563eb" }, quoted: { background: "#f5f3ff", color: "#7c3aed" }, scheduled: { background: "#f0fdf4", color: "#15803d" }, completed: { background: "#ecfdf5", color: "#059669" }, cancelled: { background: "#f1f5f9", color: "#64748b" } }; return { ...styles.status, ...(colors[s] || colors.new) }; }
-
-const styles: Record<string, CSSProperties> = {
-  page: { minHeight: "100vh", background: "#f7f8fa", color: "#111827", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" },
-  container: { maxWidth: 1200, margin: "0 auto", padding: "0 28px 60px" },
-  nav: { height: 72, display: "flex", alignItems: "center", gap: 28, borderBottom: "1px solid #e5e7eb" },
-  logo: { display: "flex", alignItems: "center", gap: 9, textDecoration: "none", color: "#111827", fontWeight: 800, fontSize: 19 },
-  logoMark: { width: 30, height: 30, display: "grid", placeItems: "center", borderRadius: 8, background: "#111827", color: "white", fontSize: 14 },
-  links: { display: "flex", justifyContent: "center", gap: 26, flex: 1 },
-  link: { color: "#6b7280", textDecoration: "none", fontSize: 13, fontWeight: 600 },
-  active: { color: "#111827", textDecoration: "none", fontSize: 13, fontWeight: 700, borderBottom: "2px solid #111827", paddingBottom: 7 },
-  primary: { color: "white", background: "#111827", textDecoration: "none", borderRadius: 8, padding: "10px 14px", fontSize: 12, fontWeight: 700 },
-  hero: { display: "flex", justifyContent: "space-between", alignItems: "end", padding: "40px 0 24px" },
-  eyebrow: { color: "#6b7280", fontSize: 10, fontWeight: 800, letterSpacing: 1.5, marginBottom: 7 },
-  title: { margin: 0, fontSize: 32, letterSpacing: -1 },
-  subtitle: { margin: "7px 0 0", color: "#6b7280", fontSize: 13 },
-  refresh: { background: "white", border: "1px solid #d9dee6", borderRadius: 8, padding: "9px 13px", cursor: "pointer", fontWeight: 700, color: "#374151" },
-  error: { padding: 13, marginBottom: 16, borderRadius: 8, background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", fontSize: 12 },
-  retry: { marginLeft: 10, border: 0, background: "none", textDecoration: "underline", cursor: "pointer", color: "inherit" },
-  stats: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 18 },
-  stat: { background: "white", border: "1px solid #e3e7ed", borderRadius: 10, padding: 17, textDecoration: "none", color: "#111827" },
-  statTop: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  statLabel: { color: "#6b7280", fontSize: 11, fontWeight: 700 },
-  statIcon: { width: 27, height: 27, display: "grid", placeItems: "center", background: "#f3f4f6", borderRadius: 7, fontWeight: 800, fontSize: 12 },
-  statValue: { fontSize: 26, fontWeight: 800, marginTop: 12 },
-  statDetail: { color: "#9ca3af", fontSize: 10, marginTop: 4 },
-  grid: { display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 18, marginBottom: 18 },
-  card: { background: "white", border: "1px solid #e3e7ed", borderRadius: 10, overflow: "hidden" },
-  cardHeader: { padding: "16px 18px", display: "flex", justifyContent: "space-between", borderBottom: "1px solid #edf0f3" },
-  cardTitle: { margin: 0, fontSize: 14 },
-  cardSubtitle: { margin: "4px 0 0", color: "#9ca3af", fontSize: 10 },
-  view: { color: "#4b5563", textDecoration: "none", fontSize: 10, fontWeight: 700 },
-  row: { display: "grid", gridTemplateColumns: "34px minmax(0,1fr) auto 120px 14px", gap: 10, alignItems: "center", padding: "12px 18px", color: "#111827", textDecoration: "none", borderBottom: "1px solid #f3f4f6", fontSize: 12 },
-  avatar: { width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", background: "#eef1f5", fontWeight: 800, fontSize: 12 },
-  rowMain: { minWidth: 0, display: "flex", flexDirection: "column", gap: 3 },
-  muted: { color: "#9ca3af", fontSize: 10 },
-  status: { borderRadius: 999, padding: "5px 8px", fontSize: 9, fontWeight: 800, textTransform: "capitalize", whiteSpace: "nowrap" },
-  contact: { color: "#9ca3af", fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  appointment: { display: "grid", gridTemplateColumns: "42px minmax(0,1fr) 14px", gap: 12, alignItems: "center", padding: "13px 18px", color: "#111827", textDecoration: "none", borderBottom: "1px solid #f3f4f6", fontSize: 12 },
-  dateBox: { width: 40, height: 40, borderRadius: 8, background: "#f5f6f8", border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: 10 },
-  center: { minHeight: 190, padding: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 5, fontSize: 12 },
-  emptyIcon: { width: 38, height: 38, borderRadius: 10, background: "#f1f5f9", display: "grid", placeItems: "center", marginBottom: 6, fontWeight: 800, color: "#475569" },
-  smallButton: { marginTop: 10, background: "#111827", color: "white", textDecoration: "none", borderRadius: 7, padding: "8px 12px", fontSize: 10, fontWeight: 700 },
-  pipelineBox: { padding: 18 },
-  pipeline: { marginBottom: 14 },
-  pipelineTop: { display: "flex", justifyContent: "space-between", marginBottom: 6, color: "#4b5563", fontSize: 10 },
-  track: { height: 7, background: "#eef0f3", borderRadius: 999, overflow: "hidden" },
-  fill: { height: "100%", background: "#374151", borderRadius: 999 },
-  action: { background: "#111827", color: "white", borderRadius: 10, padding: 26, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 235 },
-  actionLabel: { fontSize: 9, fontWeight: 800, letterSpacing: 1.3, opacity: 0.6 },
-  actionIcon: { marginTop: 18, width: 38, height: 38, borderRadius: 9, background: "#374151", display: "grid", placeItems: "center", fontSize: 20 },
-  actionTitle: { margin: "12px 0 5px", fontSize: 21 },
-  actionText: { margin: 0, color: "#9ca3af", fontSize: 11, lineHeight: 1.6 },
-  actionButton: { marginTop: 18, alignSelf: "start", background: "white", color: "#111827", textDecoration: "none", borderRadius: 7, padding: "9px 12px", fontSize: 10, fontWeight: 800 }
-};
+function Dashboard({L,loading,count,pipeline,won,setTab,open}:{L:Lead[];loading:boolean;count:(x:string)=>number;pipeline:number;won:number;setTab:(x:string)=>void;open:()=>void}){const today=new Date();today.setHours(0,0,0,0);const apps=L.filter(l=>l["appointment date"]&&l.status!=="Cancelled"&&new Date(l["appointment date"]!+"T00:00:00")>=today).sort((a,b)=>new Date(a["appointment date"]!+"T00:00:00").getTime()-new Date(b["appointment date"]!+"T00:00:00").getTime()).slice(0,5);return <><div style={s.stats}>{[["New Leads",count("New"),"Leads"],["Quotes",L.filter(l=>Number(l["quote amount"]||0)>0).length,"Quotes"],["Upcoming Jobs",apps.length,"Appointments"],["Pipeline",money(pipeline),"Quotes"]].map(x=><button key={String(x[0])} onClick={()=>setTab(String(x[2]))} style={s.stat}><span>{x[0]}</span><strong>{loading?"—":x[1]}</strong><small>{x[0]==="Pipeline"?`${money(won)} completed`:"Open →"}</small></button>)}</div><div style={s.two}><section style={s.card}><Head title="Recent Leads" go={()=>setTab("Leads")}/>{loading?<div style={s.empty}>Loading...</div>:L.slice(0,6).map(l=><Row key={l.id} l={l}/>)}</section><section style={s.card}><Head title="Upcoming Jobs" go={()=>setTab("Appointments")}/>{apps.length?apps.map(l=><Row key={l.id} l={l} app/>):<div style={s.empty}>No upcoming jobs.</div>}</section></div><div style={s.two}><section style={s.card}><Head title="Sales Pipeline" go={()=>setTab("Leads")}/>{["New","Contacted","Quoted","Scheduled","Completed"].map(x=><div key={x} style={s.pipe}><div><span>{x}</span><b>{count(x)}</b></div><div style={s.track}><div style={{...s.fill,width:`${L.length?count(x)/L.length*100:0}%`}}/></div></div>)}</section><section style={s.action}><small style={s.eyebrow}>QUICK ACTION</small><h2>Add a customer</h2><p>Create a lead, quote, and appointment in one place.</p><button onClick={open} style={s.primary}>+ Create New Lead</button></section></div></>}
+function Head({title,go}:{title:string;go:()=>void}){return <div style={s.head}><div><h2>{title}</h2><small>QuoteFlow</small></div><button onClick={go} style={s.link}>View all →</button></div>}
+function Row({l,app=false}:{l:Lead;app?:boolean}){return <div style={s.row}><span style={s.avatar}>{l.name[0]?.toUpperCase()||"?"}</span><div><b>{l.name}</b><small>{l.service||"HVAC Service"}</small></div>{app?<span>{new Date(l["appointment date"]!+"T00:00:00").toLocaleDateString()}</span>:<span style={s.badge}>{l.status||"New"}</span>}</div>}
+function Leads({rows,open,remove,update}:{rows:Lead[];open:(l:Lead)=>void;remove:(l:Lead)=>void;update:(id:string,b:Record<string,string>)=>void}){return rows.length?<Table heads={["Customer","Service","Status","Quote","Appointment","Actions"]}>{rows.map(l=><tr key={l.id}><td><b>{l.name}</b><small>{l.phone||l.email||"No contact"}</small></td><td>{l.service||"—"}</td><td><select value={l.status||"New"} onChange={e=>update(l.id,{status:e.target.value})} style={s.mini}>{statuses.map(x=><option key={x}>{x}</option>)}</select></td><td>{l["quote amount"]?money(Number(l["quote amount"])):"—"}</td><td>{l["appointment date"]||"—"}</td><td><button onClick={()=>open(l)} style={s.link}>Edit</button><button onClick={()=>remove(l)} style={s.danger}>Delete</button></td></tr>)}</Table>:<div style={s.empty}>No leads found.</div>}
+function Quotes({rows,open,update}:{rows:Lead[];open:(l:Lead)=>void;update:(id:string,b:Record<string,string>)=>void}){return rows.length?<Table heads={["Customer","Service","Amount","Status","Appointment","Action"]}>{rows.map(l=><tr key={l.id}><td><b>{l.name}</b><small>{l.email||l.phone||"No contact"}</small></td><td>{l.service||"—"}</td><td><b>{money(Number(l["quote amount"]))}</b></td><td><select value={l.status||"New"} onChange={e=>update(l.id,{status:e.target.value})} style={s.mini}>{statuses.map(x=><option key={x}>{x}</option>)}</select></td><td>{l["appointment date"]||"—"}</td><td><button onClick={()=>open(l)} style={s.link}>Edit</button></td></tr>)}</Table>:<div style={s.empty}>No quotes found.</div>}
+function Appointments({rows,open,update}:{rows:Lead[];open:(l:Lead)=>void;update:(id:string,b:Record<string,string>)=>void}){return rows.length?<Table heads={["Date","Customer","Service","Status","Action"]}>{rows.map(l=><tr key={l.id}><td><input type="date" value={l["appointment date"]||""} onChange={e=>update(l.id,{appointmentDate:e.target.value})} style={s.mini}/></td><td><b>{l.name}</b><small>{l.phone||l.email||"No contact"}</small></td><td>{l.service||"—"}</td><td><select value={l.status||"New"} onChange={e=>update(l.id,{status:e.target.value})} style={s.mini}>{statuses.map(x=><option key={x}>{x}</option>)}</select></td><td><button onClick={()=>open(l)} style={s.link}>Edit</button></td></tr>)}</Table>:<div style={s.empty}>No appointments found.</div>}
+function Table({heads,children}:{heads:string[];children:React.ReactNode}){return <div style={{overflowX:"auto"}}><table style={s.table}><thead><tr>{heads.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{children}</tbody></table></div>}
+function field(label:string,child:React.ReactNode){return <label style={s.field}>{label}{child}</label>}
+function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div style={s.overlay}><div style={s.modal}><div style={s.modalhead}><h2>{title}</h2><button onClick={close} style={s.close}>×</button></div>{children}</div></div>}
+const s:Record<string,any>={page:{minHeight:"100vh",background:"#f7f8fa",color:"#111827",fontFamily:"Inter,system-ui,sans-serif"},wrap:{maxWidth:1200,margin:"0 auto",padding:"0 28px 60px"},nav:{height:72,display:"flex",alignItems:"center",gap:20,borderBottom:"1px solid #e5e7eb"},brand:{fontSize:19,display:"flex",alignItems:"center",gap:8},logo:{width:30,height:30,display:"grid",placeItems:"center",background:"#111827",color:"white",borderRadius:8,fontStyle:"normal"},tabs:{display:"flex",justifyContent:"center",gap:3,flex:1},tab:{border:0,background:"transparent",padding:"9px 12px",borderRadius:7,cursor:"pointer",color:"#6b7280",fontSize:12},on:{background:"#eef0f3",color:"#111827",fontWeight:700},primary:{border:0,background:"#111827",color:"white",borderRadius:8,padding:"10px 14px",fontSize:12,fontWeight:700,cursor:"pointer"},hero:{display:"flex",justifyContent:"space-between",alignItems:"end",padding:"40px 0 22px"},eyebrow:{color:"#6b7280",fontSize:10,fontWeight:800,letterSpacing:1.4},h1:{fontSize:32,margin:"7px 0"},sub:{color:"#6b7280",fontSize:13},secondary:{border:"1px solid #d9dee6",background:"white",borderRadius:8,padding:"9px 13px",cursor:"pointer",fontSize:12},error:{padding:12,background:"#fff1f2",color:"#be123c",borderRadius:8,fontSize:12,marginBottom:14},notice:{padding:12,background:"#ecfdf5",color:"#166534",borderRadius:8,fontSize:12,marginBottom:14},stats:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:18},stat:{textAlign:"left",border:"1px solid #e3e7ed",background:"white",borderRadius:10,padding:17,cursor:"pointer"},two:{display:"grid",gridTemplateColumns:"1.4fr 1fr",gap:18,marginBottom:18},card:{background:"white",border:"1px solid #e3e7ed",borderRadius:10,overflow:"hidden"},head:{padding:"16px 18px",display:"flex",justifyContent:"space-between",borderBottom:"1px solid #edf0f3"},row:{display:"grid",gridTemplateColumns:"34px 1fr auto",gap:10,alignItems:"center",padding:"12px 18px",borderBottom:"1px solid #f3f4f6",fontSize:11},avatar:{width:32,height:32,borderRadius:8,display:"grid",placeItems:"center",background:"#eef1f5",fontWeight:800},badge:{background:"#f3f4f6",borderRadius:99,padding:"5px 8px",fontSize:9},pipe:{padding:"10px 18px"},track:{height:6,background:"#eef0f2",borderRadius:99,marginTop:6},fill:{height:"100%",background:"#111827",borderRadius:99},action:{background:"#111827",color:"white",borderRadius:10,padding:22},toolbar:{display:"flex",gap:10,alignItems:"center",marginBottom:14},input:{width:"100%",boxSizing:"border-box",padding:"10px 11px",border:"1px solid #d9dee6",borderRadius:8,fontSize:12,background:"white"},select:{padding:"10px",border:"1px solid #d9dee6",borderRadius:8,background:"white",fontSize:12},muted:{color:"#9ca3af",fontSize:10},cardtitle:{margin:0,fontSize:14},cardsub:{color:"#9ca3af",fontSize:10},link:{border:0,background:"none",color:"#374151",fontSize:10,fontWeight:700,cursor:"pointer"},danger:{border:0,background:"none",color:"#be123c",fontSize:10,cursor:"pointer"},table:{width:"100%",borderCollapse:"collapse",fontSize:11},mini:{padding:6,border:"1px solid #e5e7eb",borderRadius:6,fontSize:10,background:"white"},empty:{padding:55,textAlign:"center",color:"#6b7280",fontSize:12},grid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14},field:{display:"flex",flexDirection:"column",gap:6,fontSize:11,fontWeight:700,color:"#374151",marginBottom:14},textarea:{minHeight:80,padding:10,border:"1px solid #d9dee6",borderRadius:8,fontFamily:"inherit"},actions:{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16},overlay:{position:"fixed",inset:0,background:"rgba(17,24,39,.45)",display:"grid",placeItems:"center",padding:20,zIndex:20},modal:{width:"min(700px,100%)",maxHeight:"90vh",overflowY:"auto",background:"white",borderRadius:12,padding:22},modalhead:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18},close:{border:0,background:"#f3f4f6",borderRadius:7,width:30,height:30,fontSize:20,cursor:"pointer"}}
